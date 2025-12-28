@@ -382,7 +382,20 @@ export const getStudentByRollNumberAndClassCode = async (rollNumber, classCode) 
             .from('student_classes')
             .select(`
                 roll_number,
-                students(student_name)
+                students(
+                    id,
+                    student_name,
+                    father_name,
+                    mother_name,
+                    date_of_birth,
+                    registration_number
+                ),
+                sessions(
+                    start_year,
+                    start_month,
+                    end_year,
+                    end_month
+                )
             `)
             .eq('roll_number', rollNumber)
             .eq('class_id', classData.id)
@@ -410,6 +423,12 @@ export const getStudentByRollNumberAndClassCode = async (rollNumber, classCode) 
                 // We can still return the student info without class number
                 return {
                     student_name: assignmentData.students.student_name,
+                    father_name: assignmentData.students.father_name,
+                    mother_name: assignmentData.students.mother_name,
+                    date_of_birth: assignmentData.students.date_of_birth,
+                    registration_number: assignmentData.students.registration_number,
+                    student_id: assignmentData.students.id,
+                    session: assignmentData.sessions,
                     class: classCode, // Use class code as fallback
                     class_code: classCode,
                     roll_number: assignmentData.roll_number
@@ -418,6 +437,12 @@ export const getStudentByRollNumberAndClassCode = async (rollNumber, classCode) 
 
             return {
                 student_name: assignmentData.students.student_name,
+                father_name: assignmentData.students.father_name,
+                mother_name: assignmentData.students.mother_name,
+                date_of_birth: assignmentData.students.date_of_birth,
+                registration_number: assignmentData.students.registration_number,
+                student_id: assignmentData.students.id,
+                session: assignmentData.sessions,
                 class: classDetails.class_number,
                 class_code: classCode,
                 roll_number: assignmentData.roll_number

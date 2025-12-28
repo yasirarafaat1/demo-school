@@ -181,7 +181,7 @@ const FeesManagement = ({ refreshTimestamp }) => {
                       </Form.Select>
                     </Form.Group>
                   </Col>
-                  <Col md={3}>
+                  {/* <Col md={3}>
                     <Form.Group>
                       <Form.Label>Filter by Status</Form.Label>
                       <Form.Select
@@ -195,7 +195,7 @@ const FeesManagement = ({ refreshTimestamp }) => {
                         <option value="no_fees">No Fees</option>
                       </Form.Select>
                     </Form.Group>
-                  </Col>
+                  </Col> */}
                 </Row>
 
                 <Row>
@@ -232,7 +232,7 @@ const FeesManagement = ({ refreshTimestamp }) => {
                                   <th>Total Fees</th>
                                   <th>Paid Amount</th>
                                   <th>Due Amount</th>
-                                  <th>Status</th>
+                                  {/* <th>Status</th> */}
                                   <th className="text-center">Actions</th>
                                 </tr>
                               </thead>
@@ -256,7 +256,7 @@ const FeesManagement = ({ refreshTimestamp }) => {
                                       {formatCurrency(student.total_paid)}
                                     </td>
                                     <td>{formatCurrency(student.total_due)}</td>
-                                    <td>
+                                    {/* <td>
                                       <span
                                         className={`badge bg-${getFeeStatusVariant(
                                           student.fee_status
@@ -264,7 +264,7 @@ const FeesManagement = ({ refreshTimestamp }) => {
                                       >
                                         {getFeeStatusText(student.fee_status)}
                                       </span>
-                                    </td>
+                                    </td> */}
                                     <td className="text-center">
                                       <Button
                                         variant="outline-primary"

@@ -40,7 +40,7 @@ const StudentFees = () => {
     amount: "",
     paidAmount: "",
     status: "pending",
-    notes: "",
+    receiptNumber: "",
   });
   const [classes, setClasses] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -111,7 +111,7 @@ const StudentFees = () => {
       amount: "",
       paidAmount: "",
       status: "pending",
-      notes: "",
+      receiptNumber: "",
     });
     setShowAddForm(true);
   };
@@ -124,7 +124,7 @@ const StudentFees = () => {
       amount: fee.amount,
       paidAmount: fee.paid_amount,
       status: fee.status,
-      notes: fee.notes || "",
+      receiptNumber: fee.notes || "",
     });
     setShowAddForm(true);
   };
@@ -165,7 +165,7 @@ const StudentFees = () => {
         amount: parseFloat(feeForm.amount),
         paidAmount: parseFloat(feeForm.paidAmount),
         status: feeForm.status,
-        notes: feeForm.notes,
+        receiptNumber: feeForm.receiptNumber,
       };
 
       if (editingFee) {
@@ -369,9 +369,8 @@ const StudentFees = () => {
             <Card.Body>
               <h5>Total Due</h5>
               <h3
-                className={`text-${
-                  summary.total_due > 0 ? "danger" : "success"
-                }`}
+                className={`text-${summary.total_due > 0 ? "danger" : "success"
+                  }`}
               >
                 {formatCurrency(summary.total_due || 0)}
               </h3>
@@ -464,11 +463,11 @@ const StudentFees = () => {
                     </Col>
                     <Col md={12}>
                       <Form.Group className="mb-3">
-                        <Form.Label>Notes</Form.Label>
+                        <Form.Label>Receipt Number</Form.Label>
                         <Form.Control
                           as="textarea"
-                          name="notes"
-                          value={feeForm.notes}
+                          name="receiptNumber"
+                          value={feeForm.receiptNumber}
                           onChange={handleFormChange}
                           rows="2"
                         />
@@ -519,6 +518,7 @@ const StudentFees = () => {
                   <Table striped bordered hover responsive className="mb-0">
                     <thead>
                       <tr>
+                        <th>Receipt Number</th>
                         <th>Month</th>
                         <th>Year</th>
                         <th>Total Amount</th>
@@ -526,13 +526,13 @@ const StudentFees = () => {
                         <th>Due Amount</th>
                         <th>Status</th>
                         <th>Payment Date</th>
-                        <th>Notes</th>
                         <th className="text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {fees.map((fee) => (
                         <tr key={fee.id}>
+                          <td>{fee.notes || "-"}</td>
                           <td>{fee.month}</td>
                           <td>{fee.year}</td>
                           <td>{formatCurrency(fee.amount)}</td>
@@ -552,7 +552,7 @@ const StudentFees = () => {
                               ? new Date(fee.created_at).toLocaleDateString()
                               : "-"}
                           </td>
-                          <td>{fee.notes || "-"}</td>
+
                           <td className="text-center">
                             <div className="d-flex justify-content-center gap-2">
                               <Button

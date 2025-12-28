@@ -1,3 +1,5 @@
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import React, { useState, useEffect } from "react";
 import {
   Container,
@@ -11,9 +13,11 @@ import {
   Spinner,
 } from "react-bootstrap";
 import { getResultByRollNoAndClassCode } from "../services/resultService";
+import { getStudentByRollNumberAndClassCode } from "../services/classStudentService";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import SkeletonLoader from "../components/SkeletonLoader";
+
 
 const Result = () => {
   const [rollNo, setRollNo] = useState("");
@@ -21,7 +25,8 @@ const Result = () => {
   const [result, setResult] = useState(null); // This will now hold an array of results
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showResults, setShowResults] = useState(false); // Changed from resultsLoaded to showResults
+  const [studentInfo, setStudentInfo] = useState(null);
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     AOS.init({
@@ -113,6 +118,15 @@ const Result = () => {
       // Set the array of results
       setResult(data);
       setShowResults(true); // Set show results to true after data is fetched
+      
+      // Fetch additional student information
+      try {
+        const studentData = await getStudentByRollNumberAndClassCode(rollNo, classCode);
+        setStudentInfo(studentData);
+      } catch (studentError) {
+        console.error('Error fetching student info:', studentError);
+        // Continue without student info if fetch fails
+      }
     } catch (err) {
       setError(err.message || "Failed to fetch result. Please try again.");
     } finally {
@@ -123,6 +137,458 @@ const Result = () => {
   // Calculate overall metrics
   const overallMetrics =
     result && Array.isArray(result) ? calculateOverallMetrics(result) : null;
+
+  // Helper function to calculate grade
+  const calculateGrade = (obtained, total) => {
+    const percentage = (obtained / total) * 100;
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B+';
+    if (percentage >= 60) return 'B';
+    if (percentage >= 50) return 'C+';
+    if (percentage >= 40) return 'C';
+    return 'F';
+  };
+
+  const generatePDF = () => {
+    if (!result || !Array.isArray(result) || result.length === 0) return;
+
+    const doc = new jsPDF({
+      unit: 'pt',
+      format: 'a4',
+      orientation: 'portrait',
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Colors
+    const royalBlue = '#4169E1';
+    const black = '#000000';
+
+    // Header
+    const schoolName = 'Demo Public School';
+    const schoolAddress = 'Chaunspur road, Yaqutganj, Farrukhabad, Uttar Pradesh - 209749';
+    const schoolLogoUrl = '/logo.png';
+
+    // Header section with logo
+    doc.addImage(schoolLogoUrl, 'PNG', 40, 30, 80, 60);
+    
+    doc.setFontSize(20);
+    doc.setTextColor(royalBlue);
+    doc.setFont('helvetica', 'bold');
+    doc.text(schoolName.toUpperCase(), 130, 50);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(black);
+    doc.setFont('helvetica', 'normal');
+    doc.text(schoolAddress, 130, 65);
+    
+    doc.setDrawColor(royalBlue);
+    doc.setLineWidth(2);
+    doc.line(40, 90, pageWidth - 40, 90);
+
+    // Student Info without borders
+    doc.setFontSize(12);
+    doc.setTextColor(black);
+    doc.setFont('helvetica', 'bold');
+    
+    // Student details
+    const studentInfoY = 125;
+    
+    // Result title centered
+    doc.setFontSize(18);
+    doc.setTextColor(royalBlue);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Result', pageWidth / 2, studentInfoY, { align: 'center' });
+    doc.setFontSize(14);
+    doc.setTextColor(black);
+    doc.text(`Session: ${studentInfo?.session ? `${studentInfo.session.start_year}-${studentInfo.session.end_year}` : result[0]?.session_year || 'N/A'}`, pageWidth / 2, studentInfoY + 20, { align: 'center' });
+    
+    // First row - Student Information
+    doc.setFontSize(11);
+    doc.setTextColor(black);
+    
+    // Name
+    doc.setFont('helvetica', 'bold');
+    doc.text('Name:', 50, studentInfoY + 65);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${studentInfo?.student_name || result[0]?.student_name || 'N/A'}`, 85, studentInfoY + 65);
+    
+    // Father's Name
+    doc.setFont('helvetica', 'bold');
+    doc.text('Father\'s Name:', 50, studentInfoY + 80);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${studentInfo?.father_name || result[0]?.father_name || 'N/A'}`, 140, studentInfoY + 80);
+    
+    // Mother's Name
+    doc.setFont('helvetica', 'bold');
+    doc.text('Mother\'s Name:', 50, studentInfoY + 95);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${studentInfo?.mother_name || result[0]?.mother_name || 'N/A'}`, 140, studentInfoY + 95);
+    
+    // Date of Birth
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date of Birth:', 50, studentInfoY + 110);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${studentInfo?.date_of_birth ? new Date(studentInfo.date_of_birth).toLocaleDateString('en-IN') : 'N/A'}`, 125, studentInfoY + 110);
+    
+    // Second row - Academic Details
+    // Registration No
+    doc.setFont('helvetica', 'bold');
+    doc.text('Registration No:', 350, studentInfoY + 65);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${studentInfo?.registration_number || result[0]?.registration_number || 'N/A'}`, 440, studentInfoY + 65);
+    
+    // Student ID
+    doc.setFont('helvetica', 'bold');
+    doc.text('Student ID:', 350, studentInfoY + 80);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${studentInfo?.student_id || result[0]?.student_id || 'N/A'}`, 410, studentInfoY + 80);
+    
+    // Class
+    doc.setFont('helvetica', 'bold');
+    doc.text('Class:', 350, studentInfoY + 95);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${studentInfo?.class || result[0]?.class || 'N/A'} (${studentInfo?.class_code || result[0]?.class_code || 'N/A'})`, 380, studentInfoY + 95);
+    
+    // Roll Number
+    doc.setFont('helvetica', 'bold');
+    doc.text('Roll Number:', 350, studentInfoY + 110);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${studentInfo?.roll_number || result[0]?.roll_no || 'N/A'}`, 420, studentInfoY + 110);
+    
+    // Session
+    doc.setFont('helvetica', 'bold');
+    doc.text('Session:', 350, studentInfoY + 125);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${studentInfo?.session ? `${studentInfo.session.start_year}-${studentInfo.session.end_year}` : result[0]?.session_year || 'N/A'}`, 395, studentInfoY + 125);
+
+    // Enhanced Marks & Subjects Table with dynamic exam types
+    let tableColumnHeaders = ['Subject'];
+    
+    // Collect all unique exam types from the results with their creation order
+    const examTypesWithOrder = new Map();
+    result.forEach((examResult) => {
+      if (examResult.exam_type && !examTypesWithOrder.has(examResult.exam_type)) {
+        examTypesWithOrder.set(examResult.exam_type, examResult.created_at || examResult.id || 0);
+      }
+    });
+    
+    // Convert to array and sort by creation order (earliest first)
+    const sortedExamTypes = Array.from(examTypesWithOrder.entries())
+      .sort((a, b) => {
+        // Sort by creation date, if available, otherwise by insertion order
+        if (a[1] && b[1]) {
+          return new Date(a[1]) - new Date(b[1]);
+        }
+        return 0;
+      })
+      .map(([examType]) => examType);
+    
+    // Build headers dynamically based on available exam types
+    sortedExamTypes.forEach(examType => {
+      tableColumnHeaders.push(examType);
+    });
+    
+    // Always add these columns
+    tableColumnHeaders.push('Obtained Marks', 'Total Marks');
+
+    let tableRows = [];
+    
+    // Process all exam results and subjects
+    const allSubjects = {};
+    let examTypeTotals = {}; // Track totals for each exam type
+    let overallObtainedMarks = 0;
+    let overallTotalMarks = 0;
+    
+    result.forEach((examResult) => {
+      const examType = examResult.exam_type;
+      
+      if (examResult.subjects && Array.isArray(examResult.subjects)) {
+        examResult.subjects.forEach((subject) => {
+          const subjectName = subject.name || subject.subject || 'Unknown';
+          
+          if (!allSubjects[subjectName]) {
+            allSubjects[subjectName] = {
+              name: subjectName,
+              examMarks: {},
+              obtained: 0,
+              total: 0,
+              grade: 'N/A',
+              status: 'N/A'
+            };
+            
+            // Initialize all exam types with 0
+            sortedExamTypes.forEach(type => {
+              allSubjects[subjectName].examMarks[type] = 0;
+            });
+          }
+          
+          // Add marks for the specific exam type
+          const marks = subject.marks || subject.obtained_marks || 0;
+          const maxMarks = subject.max_marks || 100;
+          const grade = subject.grade; // Fetch grade directly from database
+          
+          if (examType && allSubjects[subjectName].examMarks.hasOwnProperty(examType)) {
+            allSubjects[subjectName].examMarks[examType] = marks;
+            
+            // Track exam type totals
+            if (!examTypeTotals[examType]) {
+              examTypeTotals[examType] = { total: 0, obtained: 0 };
+            }
+            examTypeTotals[examType].total += maxMarks;
+            examTypeTotals[examType].obtained += marks;
+          }
+          
+          allSubjects[subjectName].obtained = marks;
+          allSubjects[subjectName].total = maxMarks;
+          allSubjects[subjectName].grade = grade;
+          allSubjects[subjectName].status = marks >= (maxMarks * 0.4) ? 'Pass' : 'Fail';
+          
+          // Track overall totals
+          overallObtainedMarks += marks;
+          overallTotalMarks += maxMarks;
+        });
+      }
+    });
+    
+    // Convert to table rows with dynamic exam columns
+    Object.values(allSubjects).forEach(subject => {
+      const row = [subject.name];
+      
+      // Add marks for each exam type
+      sortedExamTypes.forEach(examType => {
+        row.push(subject.examMarks[examType].toString());
+      });
+      
+      // Calculate obtained marks by summing all exam type marks for this subject
+      const subjectObtainedMarks = sortedExamTypes.reduce((sum, examType) => {
+        return sum + (subject.examMarks[examType] || 0);
+      }, 0);
+      
+      // Calculate total marks for this subject
+      const subjectTotalMarks = sortedExamTypes.reduce((sum, examType) => {
+        // Find the max marks for this exam type from the original data
+        let maxMarks = 100; // default
+        result.forEach((examResult) => {
+          if (examResult.exam_type === examType && examResult.subjects) {
+            const foundSubject = examResult.subjects.find(s => 
+              (s.name || s.subject) === subject.name
+            );
+            if (foundSubject) {
+              maxMarks = foundSubject.max_marks || 100;
+            }
+          }
+        });
+        return sum + maxMarks;
+      }, 0);
+      
+      // Update the subject object with calculated values
+      subject.obtained = subjectObtainedMarks;
+      subject.total = subjectTotalMarks;
+      
+      // Add the static columns
+      row.push(
+        subjectObtainedMarks.toString(),
+        subjectTotalMarks.toString()
+      );
+      
+      tableRows.push(row);
+    });
+    
+    // Add Total row at the bottom
+    const totalRow = ['Total'];
+    let finalTotalObtained = 0;
+    let finalTotalMarks = 0;
+    
+    sortedExamTypes.forEach(examType => {
+      if (examTypeTotals[examType]) {
+        totalRow.push(`${examTypeTotals[examType].obtained}/${examTypeTotals[examType].total}`);
+        finalTotalObtained += examTypeTotals[examType].obtained;
+        finalTotalMarks += examTypeTotals[examType].total;
+      } else {
+        totalRow.push('0/0');
+      }
+    });
+    
+    const tableOverallPercentage = finalTotalMarks > 0 ? ((finalTotalObtained / finalTotalMarks) * 100).toFixed(1) : '0.0';
+    
+    // Fetch overall grade from database instead of calculating
+    let overallGrade = 'N/A';
+    if (result && result.length > 0) {
+      // Look for grade in the first result or calculate from available data
+      overallGrade = result[0].grade || result[0].overall_grade || 'N/A';
+      
+      // If no grade found in result, try to find it from subjects
+      if (overallGrade === 'N/A' && result[0].subjects) {
+        const subjectGrades = result[0].subjects.map(s => s.grade).filter(g => g && g !== 'N/A');
+        if (subjectGrades.length > 0) {
+          // Use the most frequent grade or first available grade
+          overallGrade = subjectGrades[0];
+        }
+      }
+    }
+    
+    totalRow.push(
+      finalTotalObtained.toString(),
+      finalTotalMarks.toString()
+    );
+    
+    tableRows.push(totalRow);
+
+    // Enhanced table styling with dynamic column widths
+    const columnStyles = {};
+    const totalColumns = tableColumnHeaders.length;
+    const availableWidth = pageWidth - 80; // Total width minus margins
+    
+    // Set column widths dynamically
+    columnStyles[0] = { cellWidth: 120 }; // Subject column
+    
+    // Calculate width for exam type columns
+    if (sortedExamTypes.length > 0) {
+      const examColumnWidth = Math.min(80, (availableWidth - 120 - 160) / sortedExamTypes.length);
+      sortedExamTypes.forEach((examType, index) => {
+        columnStyles[index + 1] = { cellWidth: examColumnWidth, halign: 'center' };
+      });
+    }
+    
+    // Set widths for the last 2 static columns
+    const staticColumnStart = sortedExamTypes.length + 1;
+    columnStyles[staticColumnStart] = { cellWidth: 80, halign: 'center' }; // Total Marks
+    columnStyles[staticColumnStart + 1] = { cellWidth: 80, halign: 'center' }; // Obtained Marks
+
+    autoTable(doc, {
+      head: [tableColumnHeaders],
+      body: tableRows,
+      startY: 270,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: royalBlue, 
+        textColor: 'white',
+        fontStyle: 'bold',
+        fontSize: 10
+      },
+      styles: { 
+        fontSize: 10, 
+        cellPadding: 5, 
+        textColor: black,
+        lineColor: '#e0e0e0'
+      },
+      alternateRowStyles: {
+        fillColor: [248, 249, 250]
+      },
+      margin: { left: 40, right: 40, top: 10 },
+      columnStyles: columnStyles,
+      willDrawCell: (data) => {
+        // Make the Total row bold
+        if (data.row.index === tableRows.length - 1) {
+          doc.setFont('helvetica', 'bold');
+        }
+      },
+      didDrawPage: (data) => {
+        // Footer with enhanced styling
+        const pageHeight = doc.internal.pageSize.getHeight();
+        
+        // Footer line
+        doc.setDrawColor(royalBlue);
+        doc.setLineWidth(1);
+        doc.line(40, pageHeight - 80, pageWidth - 40, pageHeight - 80);
+        
+        // Principal's signature
+        doc.setFontSize(10);
+        doc.setTextColor(black);
+        doc.text('Principal\'s Signature', pageWidth - 140, pageHeight - 60);
+        doc.setDrawColor(black);
+        doc.line(pageWidth - 140, pageHeight - 55, pageWidth - 40, pageHeight - 55);
+        
+        // Computer generated note
+        doc.setFontSize(8);
+        doc.setTextColor('#666');
+        doc.text('This report card is computer generated and does not require signature.', pageWidth / 2, pageHeight - 30, { align: 'center' });
+        
+        // Date
+        const currentDate = new Date().toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'long', 
+          year: 'numeric'
+        });
+        doc.text(`Date: ${currentDate}`, 40, pageHeight - 30);
+      },
+    });
+
+    // Enhanced Summary Section without border - all in one column
+    // Use the calculated totals from the table to ensure consistency
+    const totalMarks = finalTotalMarks;
+    const totalObtained = finalTotalObtained;
+    const overallPercentage = totalMarks > 0 ? ((totalObtained / totalMarks) * 100).toFixed(2) : '0.00';
+    const passCriteria = 40;
+    const resultStatus = overallPercentage >= passCriteria ? 'PASS' : 'FAIL';
+    
+    // Fetch grade from database instead of calculating
+    let grade = 'N/A';
+    if (result && result.length > 0) {
+      // Look for grade in the first result
+      grade = result[0].grade || result[0].overall_grade || 'N/A';
+      
+      // If no grade found in result, try to find it from subjects
+      if (grade === 'N/A' && result[0].subjects) {
+        const subjectGrades = result[0].subjects.map(s => s.grade).filter(g => g && g !== 'N/A');
+        if (subjectGrades.length > 0) {
+          // Use the most frequent grade or first available grade
+          grade = subjectGrades[0];
+        }
+      }
+    }
+    
+    const summaryY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 400;
+    
+    // Summary title on left side
+    doc.setFontSize(14);
+    doc.setTextColor(royalBlue);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ACADEMIC SUMMARY', 40, summaryY + 15);
+    
+    // All summary details in one column
+    doc.setFontSize(11);
+    doc.setTextColor(black);
+    
+    // All items in single column
+    const columnX = 40;
+    
+    // Total Marks
+    doc.setFont('helvetica', 'bold');
+    doc.text('Total Marks:', columnX, summaryY + 35);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${totalMarks}`, columnX + 70, summaryY + 35);
+    
+    // Obtained Marks
+    doc.setFont('helvetica', 'bold');
+    doc.text('Obtained Marks:', columnX, summaryY + 55);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${totalObtained}`, columnX + 85, summaryY + 55);
+    
+    // Percentage
+    doc.setFont('helvetica', 'bold');
+    doc.text('Percentage:', columnX, summaryY + 75);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${overallPercentage}%`, columnX + 65, summaryY + 75);
+    
+    // Grade
+    doc.setFont('helvetica', 'bold');
+    doc.text('Grade:', columnX, summaryY + 95);
+    doc.setFont('helvetica', 'normal');
+    doc.text(` ${grade}`, columnX + 40, summaryY + 95);
+    
+    // Result status below
+    const statusColor = resultStatus === 'PASS' ? [0, 128, 0] : [220, 20, 60];
+    doc.setTextColor(...statusColor);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text(`Result: ${resultStatus}`, columnX, summaryY + 115);
+
+    doc.save(`ReportCard_${result[0].roll_no}.pdf`);
+  };
+
 
   return (
     <Container className="py-5 mt-5">
@@ -237,14 +703,22 @@ const Result = () => {
                         </h5>
                         <p className="mb-2">
                           <strong>Student Name:</strong>{" "}
-                          {result[0].student_name}
+                          {studentInfo?.student_name || result[0].student_name}
                         </p>
                         <p className="mb-2">
                           <strong>Father's Name:</strong>{" "}
-                          {result[0].father_name}
+                          {studentInfo?.father_name || result[0].father_name || 'N/A'}
                         </p>
                         <p className="mb-2">
-                          <strong>Roll Number:</strong> {result[0].roll_no}
+                          <strong>Mother's Name:</strong>{" "}
+                          {studentInfo?.mother_name || result[0].mother_name || 'N/A'}
+                        </p>
+                        <p className="mb-2">
+                          <strong>Date of Birth:</strong>{" "}
+                          {studentInfo?.date_of_birth ? new Date(studentInfo.date_of_birth).toLocaleDateString('en-IN') : 'N/A'}
+                        </p>
+                        <p className="mb-2">
+                          <strong>Roll Number:</strong> {studentInfo?.roll_number || result[0].roll_no}
                         </p>
                       </div>
                     </Col>
@@ -252,10 +726,19 @@ const Result = () => {
                       <div className="p-3 bg-light rounded">
                         <h5 className="text-primary mb-3">Academic Details</h5>
                         <p className="mb-2">
-                          <strong>Class:</strong> {result[0].class}
+                          <strong>Registration No:</strong> {studentInfo?.registration_number || result[0].registration_number || 'N/A'}
                         </p>
                         <p className="mb-2">
-                          <strong>Class Code:</strong> {result[0].class_code}
+                          <strong>Student ID:</strong> {studentInfo?.student_id || result[0].student_id || 'N/A'}
+                        </p>
+                        <p className="mb-2">
+                          <strong>Class:</strong> {studentInfo?.class || result[0].class}
+                        </p>
+                        <p className="mb-2">
+                          <strong>Class Code:</strong> {studentInfo?.class_code || result[0].class_code}
+                        </p>
+                        <p className="mb-2">
+                          <strong>Session:</strong> {studentInfo?.session ? `${studentInfo.session.start_year}-${studentInfo.session.end_year}` : result[0]?.session_year || '2024-2025'}
                         </p>
                       </div>
                     </Col>
@@ -488,6 +971,15 @@ const Result = () => {
                     ))}
                 </div>
               </Card.Body>
+              <div className="text-center m-4">
+                <button
+                  className="btn btn-primary btn-lg"
+                  style={{ backgroundColor: '#4169E1', borderColor: '#4169E1' }}
+                  onClick={generatePDF}
+                >
+                  Download Report Card (PDF)
+                </button>
+              </div>
             </Card>
           )}
 

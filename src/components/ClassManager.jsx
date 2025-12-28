@@ -6,6 +6,7 @@ import {
   deleteClass,
   getSessions,
   addSession,
+  updateSession,
 } from "../services/classStudentService";
 import {
   Container,
@@ -39,11 +40,14 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
   // Form states
   const [showClassModal, setShowClassModal] = useState(false);
   const [showSessionModal, setShowSessionModal] = useState(false);
-  const [editingClass, setEditingClass] = useState(null);
   const [deletingClass, setDeletingClass] = useState(null);
 
-  // Full page view states
-  const [viewMode, setViewMode] = useState("list"); // 'list', 'addClass', 'editClass', 'addSession'
+  // View states
+  const [viewMode, setViewMode] = useState("list"); // 'list'
+  const [showAddClassForm, setShowAddClassForm] = useState(false);
+  const [showAddSessionForm, setShowAddSessionForm] = useState(false);
+  const [editingClass, setEditingClassForForm] = useState(null);
+  const [editingSession, setEditingSessionForForm] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
 
   // Class form data
@@ -107,7 +111,7 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
       classNumber: "",
       classCode: "",
     });
-    setViewMode("addClass");
+    setShowAddClassForm(true);
   };
 
   // Open class form for editing
@@ -118,7 +122,7 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
       classNumber: classObj.class_number,
       classCode: classObj.class_code,
     });
-    setViewMode("editClass");
+    setShowAddClassForm(true);
   };
 
   // Close class form
@@ -134,9 +138,27 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
 
   // Open session form for adding
   const openAddSessionForm = () => {
+    setEditingSession(null); // Clear any editing session state
     setSessionFormData({
       startDate: "",
       endDate: "",
+    });
+    setShowAddSessionForm(true);
+  };
+
+  // Open session form for editing
+  const openEditSessionForm = (session) => {
+    setEditingClass(null); // Clear any class editing state
+    setEditingSession(session); // Set the session being edited
+    setSessionFormData({
+      startDate: `${session.start_year}-${String(session.start_month).padStart(
+        2,
+        "0"
+      )}`,
+      endDate: `${session.end_year}-${String(session.end_month).padStart(
+        2,
+        "0"
+      )}`,
     });
     setViewMode("addSession");
   };
@@ -144,6 +166,7 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
   // Close session form
   const closeSessionForm = () => {
     setViewMode("list");
+    setEditingSession(null); // Clear editing session state
     setSessionFormData({
       startDate: "",
       endDate: "",
@@ -223,14 +246,25 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
 
     try {
       setLoading(true);
-      await addSession({
+
+      // Check if we're editing an existing session
+      // Since there's no direct way to identify the session being edited in the current structure,
+      // we need to pass the session object to identify it
+      // We'll need to track the editing session separately
+      const sessionData = {
         startYear: startDate.getFullYear(),
         startMonth: startDate.getMonth() + 1,
         endYear: endDate.getFullYear(),
         endMonth: endDate.getMonth() + 1,
-      });
+      };
 
-      setSuccess("Session added successfully!");
+      if (editingSession) {
+        await updateSession(editingSession.id, sessionData);
+        setSuccess("Session updated successfully!");
+      } else {
+        await addSession(sessionData);
+        setSuccess("Session added successfully!");
+      }
 
       // Refresh data
       await loadData();
@@ -402,6 +436,7 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
                           {/* <th>Session Year</th> */}
                           <th>Start Date</th>
                           <th>End Date</th>
+                          <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -413,6 +448,16 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
                             </td>
                             <td>
                               {session.end_month}/{session.end_year}
+                            </td>
+                            <td>
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                className="me-2"
+                                onClick={() => openEditSessionForm(session)}
+                              >
+                                <FaEdit />
+                              </Button>
                             </td>
                           </tr>
                         ))}
@@ -509,7 +554,9 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
         <Card className="mb-4">
           <Card.Header>
             <div className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Add New Session</h5>
+              <h5 className="mb-0">
+                {editingSession ? "Edit Session" : "Add New Session"}
+              </h5>
               <Button
                 variant="outline-secondary"
                 size="sm"
@@ -570,7 +617,8 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
                     </>
                   ) : (
                     <>
-                      <FaSave className="me-1" /> Save
+                      <FaSave className="me-1" />{" "}
+                      {editingSession ? "Update" : "Save"}
                     </>
                   )}
                 </Button>

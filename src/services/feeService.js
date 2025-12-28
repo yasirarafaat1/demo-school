@@ -96,7 +96,7 @@ export const addFee = async (feeData) => {
             paid_amount: feeData.paidAmount || 0,
             status: feeData.status || 'pending',
             payment_date: feeData.paymentDate || null,
-            notes: feeData.notes || null,
+            notes: feeData.receiptNumber || null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         };
@@ -133,7 +133,7 @@ export const updateFee = async (id, feeData) => {
             paid_amount: feeData.paidAmount || 0,
             status: feeData.status || 'pending',
             payment_date: feeData.paymentDate || null,
-            notes: feeData.notes || null,
+            notes: feeData.receiptNumber || null,
             updated_at: new Date().toISOString()
         };
 
@@ -228,7 +228,7 @@ export const getStudentsWithFeesForCurrentSession = async () => {
                     total_fees: totalFees,
                     total_paid: totalPaid,
                     total_due: totalDue,
-                    fee_status: totalDue > 0 ? (totalPaid > 0 ? 'partial' : 'pending') : 'paid'
+                    fee_status: totalDue > 0 ? (totalPaid > 0 ? 'partial' : 'pending') : 'no_fees'
                 });
             } else {
                 studentsWithFees.push({
@@ -307,7 +307,7 @@ export const getStudentFeeSummary = async (studentId) => {
             total_fees: totalFees,
             total_paid: totalPaid,
             total_due: totalDue,
-            fee_status: totalDue > 0 ? (totalPaid > 0 ? 'partial' : 'pending') : 'paid'
+            fee_status: totalDue > 0 ? (totalPaid > 0 ? 'partial' : 'pending') : 'no_fees'
         };
     } catch (error) {
         console.error("Error fetching student fee summary:", error.message);
