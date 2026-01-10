@@ -13,6 +13,7 @@ import {
   FaDownload,
   FaUser,
   FaInfoCircle,
+  FaArrowLeft,
 } from "react-icons/fa";
 import { supabase } from "../../services/supabaseService";
 import { uploadBulkResultsFromCSV, fetchStudentInfo } from "../../services/resultService";
@@ -25,7 +26,7 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
   const [previewData, setPreviewData] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  
+
   const fileInputRef = useRef(null);
 
   // Handle CSV upload for bulk results
@@ -49,7 +50,7 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
       // Read file for preview
       const text = await file.text();
       const lines = text.split('\n').filter(line => line.trim() !== '');
-      
+
       if (lines.length <= 1) {
         throw new Error('CSV file is empty or invalid');
       }
@@ -57,7 +58,7 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
       // Parse and validate CSV structure
       const headers = lines[0].split(',').map(h => h.trim());
       const requiredColumns = ['class_code', 'roll_no', 'exam_type', 'subject', 'obtained_marks', 'maximum_marks'];
-      
+
       const missingColumns = requiredColumns.filter(col => !headers.includes(col));
       if (missingColumns.length > 0) {
         throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
@@ -66,7 +67,7 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
       // Parse and process data for preview (simulate actual upload process)
       const previewRows = [];
       const studentExamGroups = {};
-      
+
       for (let i = 1; i <= Math.min(5, lines.length - 1); i++) {
         const values = lines[i].split(',').map(v => v.trim());
         if (values.length !== headers.length) continue;
@@ -85,7 +86,7 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
         // Validate marks
         const obtainedMarks = parseInt(row.obtained_marks);
         const maximumMarks = parseInt(row.maximum_marks);
-        
+
         if (isNaN(obtainedMarks) || isNaN(maximumMarks)) {
           throw new Error(`Invalid marks on line ${i + 1}. Both obtained_marks and maximum_marks must be numeric.`);
         }
@@ -128,7 +129,7 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
         // Calculate percentage and grade
         const percentage = (group.total_obtained / group.total_maximum) * 100;
         let grade = '';
-        
+
         if (percentage >= 90) grade = 'A+';
         else if (percentage >= 80) grade = 'A';
         else if (percentage >= 70) grade = 'B+';
@@ -209,12 +210,12 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
       setShowPreview(false);
       setPreviewData(null);
       setSelectedFile(null);
-      
+
       // Clear file input after successful upload
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-      
+
       if (onUploadSuccess) {
         onUploadSuccess();
       }
@@ -229,11 +230,11 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
   // Download CSV template
   const downloadTemplate = () => {
     const csvContent = `class_code,roll_no,exam_type,subject,obtained_marks,maximum_marks
-10A,123456,Final Exam,Mathematics,85,100
-10A,123456,Final Exam,Science,78,100
-10A,123456,Final Exam,English,92,100
-10B,654321,Final Exam,Mathematics,76,100
-10B,654321,Final Exam,Science,88,100`;
+A101,123456,Final Exam,Mathematics,85,100
+A101,123456,Final Exam,Science,78,100
+A101,123456,Final Exam,English,92,100
+B101,654321,Final Exam,Mathematics,76,100
+B101,654321,Final Exam,Science,88,100`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -248,7 +249,16 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
 
   return (
     <>
-      <Card className="mb-4">
+      <Button
+        variant="outline-secondary"
+        size="sm"
+        onClick={() => window.history.back()}
+        className="ms-5 mt-5"
+      >
+        <FaArrowLeft className="me-1" />
+        Back
+      </Button>
+      <Card className="mt-3 me-5 ms-5" style={{ border: "none" }}>
         <Card.Header>
           <div className="d-flex justify-content-between align-items-center">
             <h5 className="mb-0">Bulk Result Upload</h5>
@@ -270,7 +280,7 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
             <p className="text-muted">
               Upload results in bulk using CSV format with class code, roll number, exam type, subject, obtained marks, and maximum marks.
             </p>
-            
+
             <input
               type="file"
               accept=".csv"
@@ -331,7 +341,7 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
                 Found {previewData.totalRows} records in CSV. Showing first 5 records:
               </Alert>
               <div className="table-responsive">
-                <table className="table table-striped table-sm">
+                <table className="table table-sm">
                   <thead>
                     <tr>
                       <th>Student Name</th>
@@ -371,12 +381,12 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
                         <td>
                           <Badge variant={
                             row.grade === 'A+' ? 'success' :
-                            row.grade === 'A' ? 'primary' :
-                            row.grade === 'B+' ? 'info' :
-                            row.grade === 'B' ? 'info' :
-                            row.grade === 'C' ? 'warning' :
-                            row.grade === 'D' ? 'warning' :
-                            row.grade === 'F' ? 'danger' : 'secondary'
+                              row.grade === 'A' ? 'primary' :
+                                row.grade === 'B+' ? 'info' :
+                                  row.grade === 'B' ? 'info' :
+                                    row.grade === 'C' ? 'warning' :
+                                      row.grade === 'D' ? 'warning' :
+                                        row.grade === 'F' ? 'danger' : 'secondary'
                           }>
                             {row.grade}
                           </Badge>
@@ -393,7 +403,7 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
                             size="sm"
                             onClick={() => {
                               // Show subjects details in a simple alert for now
-                              const subjectsList = row.subjects.map(subject => 
+                              const subjectsList = row.subjects.map(subject =>
                                 `${subject.name}: ${subject.obtained_marks}/${subject.maximum_marks} (${((subject.obtained_marks / subject.maximum_marks) * 100).toFixed(1)}%)`
                               ).join('\n');
                               alert(`Subjects for ${row.student_name} (${row.roll_no}):\n\n${subjectsList}`);
@@ -442,9 +452,9 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
         <Modal.Body>
           <h6>Required Columns:</h6>
           <ul>
-            <li><strong>class_code:</strong> Class identifier (e.g., 10A, 9B)</li>
+            <li><strong>class_code:</strong> Class identifier (e.g., A101, B101)</li>
             <li><strong>roll_no:</strong> Roll number (automatically padded to 6 digits, e.g., 1 becomes 000001)</li>
-            <li><strong>exam_type:</strong> Type of exam (e.g., Final Exam, Mid Term, Unit Test)</li>
+            <li><strong>exam_type:</strong> Type of exam (e.g., Quaterly, Half-Yearly, Final Exam)</li>
             <li><strong>subject:</strong> Subject name (e.g., Mathematics, Science, English)</li>
             <li><strong>obtained_marks:</strong> Marks obtained by student (numeric)</li>
             <li><strong>maximum_marks:</strong> Maximum possible marks for the subject (numeric)</li>
@@ -466,10 +476,10 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
           <h6>Example Format:</h6>
           <div className="bg-light p-3 rounded">
             <code>
-              class_code,roll_no,exam_type,subject,obtained_marks,maximum_marks<br/>
-              10A,123456,Final Exam,Mathematics,85,100<br/>
-              10A,123456,Final Exam,Science,78,100<br/>
-              10A,123456,Final Exam,English,92,100
+              class_code,roll_no,exam_type,subject,obtained_marks,maximum_marks<br />
+              A101,123456,Final Exam,Mathematics,85,100<br />
+              A101,123456,Final Exam,Science,78,100<br />
+              A101,123456,Final Exam,English,92,100
             </code>
           </div>
 

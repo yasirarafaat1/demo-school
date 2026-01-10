@@ -264,7 +264,7 @@ const AdminDetailedResult = () => {
                             </Col>
                           </Row>
 
-                          <Table striped bordered hover responsive>
+                          <Table bordered responsive>
                             <thead className="table-dark">
                               <tr>
                                 <th>Subject</th>

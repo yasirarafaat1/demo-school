@@ -90,9 +90,10 @@ const ClassSessionManager = ({ refreshTimestamp }) => {
   // Update current session and filtered data when sessions change
   useEffect(() => {
     if (sessions.length > 0) {
-      // Find the current (non-past) session
-      const current = sessions.find((session) => !isSessionInPast(session));
-      setCurrentSession(current || sessions[0]); // Use first session if no current session
+      // Sort sessions by start year descending (latest first)
+      const sortedSessions = [...sessions].sort((a, b) => b.start_year - a.start_year);
+      // The latest session is considered current, others are past
+      setCurrentSession(sortedSessions[0]);
     }
   }, [sessions]);
 
@@ -540,7 +541,7 @@ const ClassSessionManager = ({ refreshTimestamp }) => {
 
                   {loading.classes ? (
                     <div className="table-responsive">
-                      <Table striped bordered hover>
+                      <Table bordered>
                         <thead>
                           <tr>
                             <th>Class</th>
@@ -556,7 +557,7 @@ const ClassSessionManager = ({ refreshTimestamp }) => {
                     </div>
                   ) : (
                     <div className="table-responsive">
-                      <Table striped bordered hover>
+                      <Table bordered>
                         <thead>
                           <tr>
                             <th>Class</th>
@@ -789,7 +790,7 @@ const ClassSessionManager = ({ refreshTimestamp }) => {
 
                   {loading.sessions ? (
                     <div className="table-responsive">
-                      <Table striped bordered hover>
+                      <Table bordered>
                         <thead>
                           <tr>
                             <th>Session</th>
@@ -806,7 +807,7 @@ const ClassSessionManager = ({ refreshTimestamp }) => {
                     </div>
                   ) : (
                     <div className="table-responsive">
-                      <Table striped bordered hover>
+                      <Table bordered>
                         <thead>
                           <tr>
                             <th>Session</th>
@@ -927,10 +928,10 @@ const ClassSessionManager = ({ refreshTimestamp }) => {
                                     ).toLocaleDateString()}
                                   </td>
                                   <td>
-                                    {isSessionInPast(session) ? (
-                                      <Badge bg="secondary">Past</Badge>
-                                    ) : (
+                                    {currentSession && session.id === currentSession.id ? (
                                       <Badge bg="success">Current</Badge>
+                                    ) : (
+                                      <Badge bg="secondary">Past</Badge>
                                     )}
                                   </td>
                                   <td>

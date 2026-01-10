@@ -126,9 +126,17 @@ const ResultManager = ({ refreshTimestamp }) => {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h4>Result Management</h4>
+      <div className="d-flex justify-content-between align-items-center">
+        {/* <h4>Result Management</h4> */}
         <div className="d-flex gap-2">
+          <Button
+            variant="success"
+            onClick={navigateToBulkUpload}
+            disabled={loading}
+          >
+            <FaUpload className="me-2" />
+            CSV Upload
+          </Button>
           <Button
             variant="primary"
             onClick={navigateToAddResult}
@@ -136,14 +144,6 @@ const ResultManager = ({ refreshTimestamp }) => {
           >
             <FaPlus className="me-2" />
             Add Result
-          </Button>
-          <Button
-            variant="success"
-            onClick={navigateToBulkUpload}
-            disabled={loading}
-          >
-            <FaUpload className="me-2" />
-            Bulk Upload
           </Button>
         </div>
       </div>
@@ -159,13 +159,6 @@ const ResultManager = ({ refreshTimestamp }) => {
           {success}
         </Alert>
       )}
-
-      {/* Bulk Result Upload Component */}
-      <Card className="mb-4">
-        <Card.Body>
-          <BulkResultUpload onUploadSuccess={fetchData} />
-        </Card.Body>
-      </Card>
     </>
   );
 };

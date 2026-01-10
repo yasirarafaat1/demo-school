@@ -112,10 +112,12 @@ const AdminDashboard = () => {
   const [notices, setNotices] = useState([]);
   const [results, setResults] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [filteredClasses, setFilteredClasses] = useState([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [classesError, setClassesError] = useState("");
   const [availableSessions, setAvailableSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState("current");
+  const [resultsSearchTerm, setResultsSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [recentActivity, setRecentActivity] = useState([]);
@@ -129,7 +131,7 @@ const AdminDashboard = () => {
 
   // Search, filter, and sort states (only for non-manager tabs)
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({ key: "class", direction: "asc" });
   const [filters, setFilters] = useState({});
   const [refreshTimestamp, setRefreshTimestamp] = useState(Date.now());
 
@@ -239,11 +241,30 @@ const AdminDashboard = () => {
     try {
       const classesData = await getClassesWithResults(selectedSession);
       setClasses(classesData);
+      setFilteredClasses(classesData);
     } catch (err) {
       console.error("Error fetching classes:", err);
       setClassesError("Failed to load classes. Please try again.");
     } finally {
       setClassesLoading(false);
+    }
+  };
+
+  // Handle search for results section
+  const handleResultsSearch = (query) => {
+    setResultsSearchTerm(query);
+    if (query.trim() === "") {
+      setFilteredClasses(classes);
+    } else {
+      const filtered = classes.filter((classInfo) => {
+        const searchLower = query.toLowerCase();
+        return (
+          classInfo.class?.toLowerCase().includes(searchLower) ||
+          classInfo.class_code?.toLowerCase().includes(searchLower) ||
+          classInfo.student_count?.toString().includes(searchLower)
+        );
+      });
+      setFilteredClasses(filtered);
     }
   };
 
@@ -1061,7 +1082,7 @@ const AdminDashboard = () => {
                     </div>
                     {processedData.length > 0 ? (
                       <div className={styles.tableContainer}>
-                        <Table striped bordered hover responsive>
+                        <Table bordered responsive>
                           <thead>
                             <tr>
                               <th
@@ -1157,7 +1178,7 @@ const AdminDashboard = () => {
                     </div>
                     {processedData.length > 0 ? (
                       <div className={styles.tableContainer}>
-                        <Table striped bordered hover responsive>
+                        <Table bordered responsive>
                           <thead>
                             <tr>
                               <th
@@ -1221,15 +1242,6 @@ const AdminDashboard = () => {
                 <>
                   <div className="d-flex justify-content-between align-items-center mb-4">
                     <h4>Result Management</h4>
-                    <div className="btn-group" role="group">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        disabled
-                      >
-                        Current Session Classes
-                      </Button>
-                    </div>
                   </div>
 
                   {/* Always show ResultManager for Add Result and Bulk Upload buttons */}
@@ -1251,23 +1263,52 @@ const AdminDashboard = () => {
                               <FaUsers className="me-2" />
                               Available Classes
                             </h5>
-                            <div style={{ minWidth: 220 }}>
-                              <Form.Select
-                                size="sm"
-                                value={selectedSession}
-                                onChange={(e) => {
-                                  setSelectedSession(e.target.value);
-                                }}
-                              >
-                                <option value="current">Current</option>
-                                {availableSessions.map((s) => (
-                                  <option key={s.value} value={s.value}>
-                                    {s.label}
-                                  </option>
-                                ))}
-                              </Form.Select>
+                            <div className="d-flex gap-2 align-items-center">
+                              <div className="position-relative">
+                                <Form.Control
+                                  type="text"
+                                  placeholder="Search classes..."
+                                  value={resultsSearchTerm}
+                                  onChange={(e) => handleResultsSearch(e.target.value)}
+                                  className="ps-5"
+                                  style={{ width: "200px" }}
+                                />
+                                <FaSearch 
+                                  className="position-absolute" 
+                                  style={{ 
+                                    left: "12px", 
+                                    top: "50%", 
+                                    transform: "translateY(-50%)",
+                                    color: "#6c757d"
+                                  }} 
+                                />
+                              </div>
+                              <div style={{ minWidth: 200 }}>
+                                <Form.Select
+                                  size="sm"
+                                  value={`${sortConfig.key}-${sortConfig.direction}`}
+                                  onChange={(e) => {
+                                    const [key, direction] = e.target.value.split('-');
+                                    setSortConfig({ key, direction });
+                                  }}
+                                >
+                                  <option value="">Sort by...</option>
+                                  <optgroup label="Class Number">
+                                    <option value="class-asc">Class: Low to High</option>
+                                    <option value="class-desc">Class: High to Low</option>
+                                  </optgroup>
+                                  <optgroup label="Class Code">
+                                    <option value="class_code-asc">Class Code: High to Low</option>
+                                    <option value="class_code-desc">Class Code: Low to High</option>
+                                  </optgroup>
+                                  <optgroup label="Student Count">
+                                    <option value="student_count-desc">Students: Most to Least</option>
+                                    <option value="student_count-asc">Students: Least to Most</option>
+                                  </optgroup>
+                                </Form.Select>
+                              </div>
                             </div>
-                          </div>
+                        </div>
                         </Card.Header>
                         <Card.Body>
                           {classesLoading ? (
@@ -1279,19 +1320,40 @@ const AdminDashboard = () => {
                             <Alert variant="danger" onClose={() => setClassesError("")} dismissible>
                               {classesError}
                             </Alert>
-                          ) : classes.length > 0 ? (
+                          ) : filteredClasses.length > 0 ? (
                             <div className="table-responsive">
-                              <table className="table table-striped table-bordered table-hover">
+                              <table className="table table-bordered">
                                 <thead>
                                   <tr>
-                                    <th>Class Number</th>
-                                    <th>Class Code</th>
-                                    <th>Students with Results</th>
+                                    <th
+                                      onClick={() => handleSort("class")}
+                                      style={{ cursor: "pointer" }}
+                                    >
+                                      Class Number{" "}
+                                      {sortConfig.key === "class" &&
+                                        (sortConfig.direction === "asc" ? "↑" : "↓")}
+                                    </th>
+                                    <th
+                                      onClick={() => handleSort("class_code")}
+                                      style={{ cursor: "pointer" }}
+                                    >
+                                      Class Code{" "}
+                                      {sortConfig.key === "class_code" &&
+                                        (sortConfig.direction === "asc" ? "↑" : "↓")}
+                                    </th>
+                                    <th
+                                      onClick={() => handleSort("student_count")}
+                                      style={{ cursor: "pointer" }}
+                                    >
+                                      Students with Results{" "}
+                                      {sortConfig.key === "student_count" &&
+                                        (sortConfig.direction === "asc" ? "↑" : "↓")}
+                                    </th>
                                     <th>Actions</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {classes.map((classInfo) => (
+                                  {applySorting(filteredClasses).map((classInfo) => (
                                     <tr key={classInfo.class_code}>
                                       <td>{classInfo.class}</td>
                                       <td>{classInfo.class_code}</td>
@@ -1317,10 +1379,16 @@ const AdminDashboard = () => {
                             </div>
                           ) : (
                             <div className="text-center py-4">
-                              <p>No classes with results found.</p>
-                              <p className="text-muted">
-                                Upload some results first to see classes here.
+                              <p>
+                                {resultsSearchTerm
+                                  ? "No classes found matching your search."
+                                  : "No classes with results found."}
                               </p>
+                              {!resultsSearchTerm && (
+                                <p className="text-muted">
+                                  Upload some results first to see classes here.
+                                </p>
+                              )}
                             </div>
                           )}
                         </Card.Body>
@@ -1354,7 +1422,7 @@ const AdminDashboard = () => {
                     </div>
                     {processedData.length > 0 ? (
                       <div className={styles.tableContainer}>
-                        <Table striped bordered hover responsive>
+                        <Table bordered responsive>
                           <thead>
                             <tr>
                               <th

@@ -365,7 +365,7 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
                   </p>
                 ) : (
                   <div className="table-responsive">
-                    <Table striped bordered hover size="sm">
+                    <Table bordered size="sm">
                       <thead>
                         <tr>
                           <th>Class Number</th>
@@ -430,7 +430,7 @@ const ClassManager = ({ refreshTimestamp, fetchData }) => {
                   </p>
                 ) : (
                   <div className="table-responsive">
-                    <Table striped bordered hover size="sm">
+                    <Table bordered size="sm">
                       <thead>
                         <tr>
                           {/* <th>Session Year</th> */}

@@ -182,12 +182,12 @@ const ImportantDatesManager = () => {
                 </div>
               ) : (
                 <div className="table-responsive">
-                  <Table striped bordered hover responsive className="mb-0">
+                  <Table bordered responsive className="mb-0">
                     <thead>
                       <tr>
                         <th>Event</th>
                         <th>Date Range</th>
-                        <th className="text-end">Actions</th>
+                        <th className="text-start">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -198,7 +198,7 @@ const ImportantDatesManager = () => {
                             {formatDateRange(date.start_date, date.end_date)}
                           </td>
                           <td>
-                            <div className="d-flex justify-content-end gap-2">
+                            <div className="d-flex justify-content-start gap-2">
                               <Button
                                 variant="outline-primary"
                                 size="sm"

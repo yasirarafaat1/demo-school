@@ -175,14 +175,14 @@ const FeeStructureManager = ({ refreshTimestamp, fetchData }) => {
                 </div>
               ) : (
                 <div className="table-responsive">
-                  <Table striped bordered hover responsive className="mb-0">
+                  <Table bordered responsive className="mb-0">
                     <thead>
                       <tr>
                         <th>Class</th>
                         <th>Admission Fee</th>
                         <th>Annual Fee</th>
                         <th>Monthly Fee</th>
-                        <th className="text-end">Actions</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -193,7 +193,7 @@ const FeeStructureManager = ({ refreshTimestamp, fetchData }) => {
                           <td>{formatCurrency(fee.annual_fee)}</td>
                           <td>{formatCurrency(fee.monthly_fee)}</td>
                           <td>
-                            <div className="d-flex justify-content-end gap-2">
+                            <div className="d-flex justify-content-start gap-2">
                               <Button
                                 variant="outline-primary"
                                 size="sm"

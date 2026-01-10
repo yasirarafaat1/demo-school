@@ -5,7 +5,6 @@ import {
   Form,
   Row,
   Col,
-  Modal,
   Alert,
   Spinner,
   Image,
@@ -35,15 +34,19 @@ import {
   deleteStaffMember,
 } from "../../services/adminService";
 import { supabase } from "../../services/supabaseService";
-import UpdateHistory from "../user/UpdateHistory";
 import { sendStaffNotification } from "../../services/notificationService";
+
+// Format date function
+const formatDateTime = (dateString) => {
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleDateString();
+};
 
 const StaffManager = ({ refreshTimestamp, fetchData }) => {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -331,7 +334,6 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
         await sendStaffNotification("add", formData.name);
       }
 
-      setShowModal(false);
       fetchStaff();
       if (fetchData) {
         fetchData();
@@ -371,6 +373,13 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
     });
     setEditingId(staffMember.id);
     setViewMode("editStaff");
+    // Scroll to the staff member being edited
+    setTimeout(() => {
+      const element = document.getElementById(`staff-${staffMember.id}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
   };
 
   // Handle delete button click
@@ -437,20 +446,212 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
 
   return (
     <div className="staff-manager">
-      {viewMode === "list" && (
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4>Staff Management</h4>
+      {/* Header and Add Button - Always visible */}
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h4>Staff Management</h4>
+        {viewMode === "list" && (
           <Button
             variant="primary"
             onClick={() => {
               handleReset();
               setViewMode("addStaff");
+              // Scroll to top when adding new staff
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
           >
             <FaPlus className="me-2" /> Add Staff Member
           </Button>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Add Staff Form - Appears at top when adding */}
+      {viewMode === "addStaff" && (
+        <Card className="mb-4 border-primary">
+          <Card.Header className="text-white">
+            <div className="d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">
+                <FaPlus className="me-2" />Add New Staff Member
+              </h5>
+              <Button variant="secondary" size="sm" onClick={closeForm}>
+                <FaTimes className="me-1" /> Cancel
+              </Button>
+            </div>
+          </Card.Header>
+          <Card.Body>
+            <Form onSubmit={handleSubmit}>
+                  <Row>
+                    <Col md={4} className="text-center mb-3">
+                      <div className="position-relative d-inline-block">
+                        <div className="position-relative">
+                          <Image
+                            src={formData.image || "/logo.png"}
+                            alt="Staff"
+                            rounded
+                            className="mb-3"
+                            style={{
+                              width: "150px",
+                              height: "150px",
+                              objectFit: "cover",
+                            }}
+                            onError={(e) => {
+                              e.target.src = "/logo.png";
+                            }}
+                          />
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleImageUpload}
+                            accept="image/*"
+                            style={{ display: "none" }}
+                          />
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={triggerFileInput}
+                            disabled={uploading}
+                            className="position-absolute bottom-0 end-0"
+                          >
+                            {uploading ? (
+                              <Spinner animation="border" size="sm" />
+                            ) : (
+                              <FaUpload />
+                            )}
+                          </Button>
+                        </div>
+                        <Form.Text className="text-muted">
+                          Upload a clear photo of the staff member (Max 5MB)
+                        </Form.Text>
+                      </div>
+                    </Col>
+                    <Col md={8}>
+                      <Row>
+                        <Col md={6}>
+                          <Form.Group controlId="addFormName" className="mb-3">
+                            <Form.Label>Full Name *</Form.Label>
+                            <Form.Control
+                              type="text"
+                              name="name"
+                              value={formData.name}
+                              onChange={handleInputChange}
+                              placeholder="Enter full name"
+                              required
+                            />
+                          </Form.Group>
+                        </Col>
+                        <Col md={6}>
+                          <Form.Group controlId="addFormRole" className="mb-3">
+                            <Form.Label>Role/Position *</Form.Label>
+                            <Form.Control
+                              type="text"
+                              name="role"
+                              value={formData.role}
+                              onChange={handleInputChange}
+                              placeholder="e.g., Teacher, Principal"
+                              required
+                            />
+                          </Form.Group>
+                        </Col>
+                      </Row>
+                      <Row>
+                        <Col md={6}>
+                          <Form.Group controlId="addFormQualification" className="mb-3">
+                            <Form.Label>Qualification</Form.Label>
+                            <Form.Control
+                              type="text"
+                              name="qualification"
+                              value={formData.qualification}
+                              onChange={handleInputChange}
+                              placeholder="e.g., M.Sc, B.Ed"
+                            />
+                          </Form.Group>
+                        </Col>
+                        <Col md={6}>
+                          <Form.Group controlId="addFormContact" className="mb-3">
+                            <Form.Label>Contact Number</Form.Label>
+                            <Form.Control
+                              type="tel"
+                              name="contact"
+                              value={formData.contact}
+                              onChange={handleInputChange}
+                              placeholder="e.g., +1234567890"
+                            />
+                          </Form.Group>
+                        </Col>
+                      </Row>
+                      <Row>
+                        <Col md={12}>
+                          <Form.Group controlId="addFormEmail" className="mb-3">
+                            <Form.Label>Email Address *</Form.Label>
+                            <Form.Control
+                              type="email"
+                              name="email"
+                              value={formData.email}
+                              onChange={handleInputChange}
+                              placeholder="e.g., staff@example.com"
+                              required
+                            />
+                          </Form.Group>
+                        </Col>
+                      </Row>
+                      <Row>
+                        <Col md={12}>
+                          <Form.Group controlId="addFormStatus" className="mb-3">
+                            <Form.Label>Status</Form.Label>
+                            <Form.Select
+                              name="status"
+                              value={formData.status}
+                              onChange={handleInputChange}
+                            >
+                              <option value="active">Active</option>
+                              <option value="inactive">Inactive</option>
+                              <option value="on_leave">On Leave</option>
+                              <option value="retired">Retired</option>
+                            </Form.Select>
+                          </Form.Group>
+                        </Col>
+                      </Row>
+                    </Col>
+                  </Row>
+
+                  <div className="d-flex justify-content-end gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={closeForm}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      disabled={
+                        !formData.name ||
+                        !formData.role ||
+                        !formData.email ||
+                        isSubmitting
+                      }
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Spinner
+                            as="span"
+                            size="sm"
+                            animation="border"
+                            role="status"
+                            aria-hidden="true"
+                            className="me-2"
+                          />
+                          Adding...
+                        </>
+                      ) : (
+                        "Add Staff"
+                      )}
+                    </Button>
+                  </div>
+                </Form>
+              </Card.Body>
+            </Card>
+          )}
 
       {viewMode === "list" && error && (
         <Alert variant="danger" className="mb-4">
@@ -463,7 +664,9 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
         </Alert>
       )}
 
-      <Card className="mb-4">
+      {/* Staff List - Only show in list mode */}
+      {viewMode === "list" && (
+        <Card className="mb-4">
         <Card.Header
           onClick={togglePanel}
           style={{ cursor: "pointer" }}
@@ -535,114 +738,24 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                 <>
                   {/* Desktop Table View */}
                   <div className="d-none d-md-block">
-                    <Table striped bordered hover responsive>
+                    <Table bordered responsive>
                       <thead>
                         <tr>
-                          <th width="10%">Photo</th>
+                          <th>Photo</th>
                           <th>Name</th>
                           <th>Role</th>
                           <th>Qualification</th>
                           <th>Contact</th>
+                          <th>Joined Date</th>
                           <th>Status</th>
                           <th width="15%">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredStaff.map((member) => (
-                          <tr key={member.id}>
-                            <td>
-                              <Image
-                                src={
-                                  member.image_url ||
-                                  member.image ||
-                                  "/logo.png"
-                                }
-                                alt={member.name}
-                                rounded
-                                style={{
-                                  width: "50px",
-                                  height: "50px",
-                                  objectFit: "cover",
-                                }}
-                                onError={(e) => {
-                                  e.target.src = "/logo.png";
-                                }}
-                              />
-                            </td>
-                            <td>
-                              <strong>{member.name}</strong>
-                              <div className="small text-muted">
-                                {member.email}
-                              </div>
-                            </td>
-                            <td>
-                              <div className="d-flex align-items-center">
-                                {getRoleIcon(member.role)}
-                                {member.role}
-                              </div>
-                            </td>
-                            <td>{member.qualification || "-"}</td>
-                            <td>
-                              {member.contact ? (
-                                <a href={`tel:${member.contact}`}>
-                                  {member.contact}
-                                </a>
-                              ) : (
-                                "-"
-                              )}
-                            </td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  member.status === "active"
-                                    ? "bg-success"
-                                    : member.status === "inactive"
-                                    ? "bg-danger"
-                                    : member.status === "retired"
-                                    ? "bg-secondary"
-                                    : "bg-warning"
-                                }`}
-                              >
-                                {member.status === "active"
-                                  ? "Active"
-                                  : member.status === "inactive"
-                                  ? "Inactive"
-                                  : member.status === "retired"
-                                  ? "Retired"
-                                  : "On Leave"}
-                              </span>
-                            </td>
-                            <td>
-                              <Button
-                                variant="outline-primary"
-                                size="sm"
-                                className="me-1"
-                                onClick={() => handleEdit(member)}
-                              >
-                                <FaEdit />
-                              </Button>
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                onClick={() => handleDelete(member.id)}
-                              >
-                                <FaTrash />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </div>
-
-                  {/* Mobile Card View */}
-                  <div className="d-md-none">
-                    <Row xs={1} className="g-3">
-                      {filteredStaff.map((member) => (
-                        <Col key={member.id}>
-                          <Card>
-                            <Card.Body>
-                              <div className="d-flex">
+                          <React.Fragment key={member.id}>
+                            <tr id={`staff-${member.id}`}>
+                              <td>
                                 <Image
                                   src={
                                     member.image_url ||
@@ -652,65 +765,60 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                                   alt={member.name}
                                   rounded
                                   style={{
-                                    width: "60px",
-                                    height: "60px",
+                                    width: "50px",
+                                    height: "50px",
                                     objectFit: "cover",
                                   }}
                                   onError={(e) => {
                                     e.target.src = "/logo.png";
                                   }}
                                 />
-                                <div className="ms-3 flex-grow-1">
-                                  <Card.Title className="mb-1 d-flex align-items-center">
-                                    {getRoleIcon(member.role)}
-                                    {member.name}
-                                  </Card.Title>
-                                  <div className="small text-muted mb-1">
-                                    {member.email}
-                                  </div>
-                                  <div className="small">
-                                    <strong>Role:</strong> {member.role}
-                                  </div>
-                                  {member.qualification && (
-                                    <div className="small">
-                                      <strong>Qualification:</strong>{" "}
-                                      {member.qualification}
-                                    </div>
-                                  )}
-                                  {member.contact && (
-                                    <div className="small">
-                                      <strong>Contact:</strong>
-                                      <a href={`tel:${member.contact}`}>
-                                        {" "}
-                                        {member.contact}
-                                      </a>
-                                    </div>
-                                  )}
-                                  <div className="small">
-                                    <strong>Status:</strong>
-                                    <span
-                                      className={`badge ${
-                                        member.status === "active"
-                                          ? "bg-success"
-                                          : member.status === "inactive"
-                                          ? "bg-danger"
-                                          : member.status === "retired"
-                                          ? "bg-secondary"
-                                          : "bg-warning"
-                                      } ms-1`}
-                                    >
-                                      {member.status === "active"
-                                        ? "Active"
-                                        : member.status === "inactive"
-                                        ? "Inactive"
-                                        : member.status === "retired"
-                                        ? "Retired"
-                                        : "On Leave"}
-                                    </span>
-                                  </div>
+                              </td>
+                              <td>
+                                <strong>{member.name}</strong>
+                                <div className="small text-muted">
+                                  {member.email}
                                 </div>
-                              </div>
-                              <div className="mt-3 d-flex justify-content-end">
+                              </td>
+                              <td>
+                                <div className="d-flex align-items-center">
+                                  {getRoleIcon(member.role)}
+                                  {member.role}
+                                </div>
+                              </td>
+                              <td>{member.qualification || "-"}</td>
+                              <td>
+                                {member.contact ? (
+                                  <a href={`tel:${member.contact}`}>
+                                    {member.contact}
+                                  </a>
+                                ) : (
+                                  "-"
+                                )}
+                              </td>
+                              <td>{formatDateTime(member.created_at)}</td>
+                              <td>
+                                <span
+                                  className={`badge ${
+                                    member.status === "active"
+                                      ? "bg-success"
+                                      : member.status === "inactive"
+                                      ? "bg-danger"
+                                      : member.status === "retired"
+                                      ? "bg-secondary"
+                                      : "bg-warning"
+                                  }`}
+                                >
+                                  {member.status === "active"
+                                    ? "Active"
+                                    : member.status === "inactive"
+                                    ? "Inactive"
+                                    : member.status === "retired"
+                                    ? "Retired"
+                                    : "On Leave"}
+                                </span>
+                              </td>
+                              <td>
                                 <Button
                                   variant="outline-primary"
                                   size="sm"
@@ -726,10 +834,479 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                                 >
                                   <FaTrash />
                                 </Button>
-                              </div>
-                            </Card.Body>
-                          </Card>
-                        </Col>
+                              </td>
+                            </tr>
+                            {/* Edit Form Row - Appears below staff member when editing */}
+                            {viewMode === "editStaff" && editingId === member.id && (
+                              <tr>
+                                <td colSpan="7" className="p-0">
+                                  <Card className="m-2">
+                                    <Card.Header className="text-dark">
+                                      <div className="d-flex justify-content-between align-items-center">
+                                        <h6 className="mb-0">
+                                          <FaEdit className="me-2" />Editing: {member.name}
+                                        </h6>
+                                        <Button variant="secondary" size="sm" onClick={closeForm}>
+                                          <FaTimes className="me-1" /> Cancel
+                                        </Button>
+                                      </div>
+                                    </Card.Header>
+                                    <Card.Body>
+                                      <Form onSubmit={handleSubmit}>
+                                        <Row>
+                                          <Col md={4} className="text-center mb-3">
+                                            <div className="position-relative d-inline-block">
+                                              <div className="position-relative">
+                                                <Image
+                                                  src={formData.image || "/logo.png"}
+                                                  alt="Staff"
+                                                  rounded
+                                                  className="mb-3"
+                                                  style={{
+                                                    width: "120px",
+                                                    height: "120px",
+                                                    objectFit: "cover",
+                                                  }}
+                                                  onError={(e) => {
+                                                    e.target.src = "/logo.png";
+                                                  }}
+                                                />
+                                                <input
+                                                  type="file"
+                                                  ref={fileInputRef}
+                                                  onChange={handleImageUpload}
+                                                  accept="image/*"
+                                                  style={{ display: "none" }}
+                                                />
+                                                <Button
+                                                  variant="primary"
+                                                  size="sm"
+                                                  onClick={triggerFileInput}
+                                                  disabled={uploading}
+                                                  className="position-absolute bottom-0 end-0"
+                                                >
+                                                  {uploading ? (
+                                                    <Spinner animation="border" size="sm" />
+                                                  ) : (
+                                                    <FaUpload />
+                                                  )}
+                                                </Button>
+                                              </div>
+                                              <Form.Text className="text-muted small">
+                                                Upload photo (Max 5MB)
+                                              </Form.Text>
+                                            </div>
+                                          </Col>
+                                          <Col md={8}>
+                                            <Row>
+                                              <Col md={6}>
+                                                <Form.Group controlId={`editFormName-${member.id}`} className="mb-3">
+                                                  <Form.Label>Full Name *</Form.Label>
+                                                  <Form.Control
+                                                    type="text"
+                                                    name="name"
+                                                    value={formData.name}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Enter full name"
+                                                    required
+                                                  />
+                                                </Form.Group>
+                                              </Col>
+                                              <Col md={6}>
+                                                <Form.Group controlId={`editFormRole-${member.id}`} className="mb-3">
+                                                  <Form.Label>Role/Position *</Form.Label>
+                                                  <Form.Control
+                                                    type="text"
+                                                    name="role"
+                                                    value={formData.role}
+                                                    onChange={handleInputChange}
+                                                    placeholder="e.g., Teacher, Principal"
+                                                    required
+                                                  />
+                                                </Form.Group>
+                                              </Col>
+                                            </Row>
+                                            <Row>
+                                              <Col md={6}>
+                                                <Form.Group controlId={`editFormQualification-${member.id}`} className="mb-3">
+                                                  <Form.Label>Qualification</Form.Label>
+                                                  <Form.Control
+                                                    type="text"
+                                                    name="qualification"
+                                                    value={formData.qualification}
+                                                    onChange={handleInputChange}
+                                                    placeholder="e.g., M.Sc, B.Ed"
+                                                  />
+                                                </Form.Group>
+                                              </Col>
+                                              <Col md={6}>
+                                                <Form.Group controlId={`editFormContact-${member.id}`} className="mb-3">
+                                                  <Form.Label>Contact Number</Form.Label>
+                                                  <Form.Control
+                                                    type="tel"
+                                                    name="contact"
+                                                    value={formData.contact}
+                                                    onChange={handleInputChange}
+                                                    placeholder="e.g., +1234567890"
+                                                  />
+                                                </Form.Group>
+                                              </Col>
+                                            </Row>
+                                            <Row>
+                                              <Col md={12}>
+                                                <Form.Group controlId={`editFormEmail-${member.id}`} className="mb-3">
+                                                  <Form.Label>Email Address *</Form.Label>
+                                                  <Form.Control
+                                                    type="email"
+                                                    name="email"
+                                                    value={formData.email}
+                                                    onChange={handleInputChange}
+                                                    placeholder="e.g., staff@example.com"
+                                                    required
+                                                  />
+                                                </Form.Group>
+                                              </Col>
+                                            </Row>
+                                            <Row>
+                                              <Col md={6}>
+                                                <Form.Group controlId={`editFormStatus-${member.id}`} className="mb-3">
+                                                  <Form.Label>Status</Form.Label>
+                                                  <Form.Select
+                                                    name="status"
+                                                    value={formData.status}
+                                                    onChange={handleInputChange}
+                                                  >
+                                                    <option value="active">Active</option>
+                                                    <option value="inactive">Inactive</option>
+                                                    <option value="on_leave">On Leave</option>
+                                                    <option value="retired">Retired</option>
+                                                  </Form.Select>
+                                                </Form.Group>
+                                              </Col>
+                                            </Row>
+                                          </Col>
+                                        </Row>
+
+                                        <div className="d-flex justify-content-end gap-2">
+                                          <Button
+                                            variant="primary"
+                                            type="submit"
+                                            disabled={
+                                              !formData.name ||
+                                              !formData.role ||
+                                              !formData.email ||
+                                              isSubmitting
+                                            }
+                                          >
+                                            {isSubmitting ? (
+                                              <>
+                                                <Spinner
+                                                  as="span"
+                                                  size="sm"
+                                                  animation="border"
+                                                  role="status"
+                                                  aria-hidden="true"
+                                                  className="me-2"
+                                                />
+                                                Updating...
+                                              </>
+                                            ) : (
+                                              "Update Staff"
+                                            )}
+                                          </Button>
+                                        </div>
+                                      </Form>
+                                    </Card.Body>
+                                  </Card>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="d-md-none">
+                    <Row xs={1} className="g-3">
+                      {filteredStaff.map((member) => (
+                        <React.Fragment key={member.id}>
+                          <Col id={`staff-${member.id}`}>
+                            <Card>
+                              <Card.Body>
+                                <div className="d-flex">
+                                  <Image
+                                    src={
+                                      member.image_url ||
+                                      member.image ||
+                                      "/logo.png"
+                                    }
+                                    alt={member.name}
+                                    rounded
+                                    style={{
+                                      width: "60px",
+                                      height: "60px",
+                                      objectFit: "cover",
+                                    }}
+                                    onError={(e) => {
+                                      e.target.src = "/logo.png";
+                                    }}
+                                  />
+                                  <div className="ms-3 flex-grow-1">
+                                    <Card.Title className="mb-1 d-flex align-items-center">
+                                      {getRoleIcon(member.role)}
+                                      {member.name}
+                                    </Card.Title>
+                                    <div className="small text-muted mb-1">
+                                      {member.email}
+                                    </div>
+                                    <div className="small">
+                                      <strong>Role:</strong> {member.role}
+                                    </div>
+                                    {member.qualification && (
+                                      <div className="small">
+                                        <strong>Qualification:</strong>{" "}
+                                        {member.qualification}
+                                      </div>
+                                    )}
+                                    {member.contact && (
+                                      <div className="small">
+                                        <strong>Contact:</strong>
+                                        <a href={`tel:${member.contact}`}>
+                                          {" "}
+                                          {member.contact}
+                                        </a>
+                                      </div>
+                                    )}
+                                    <div className="small">
+                                      <strong>Status:</strong>
+                                      <span
+                                        className={`badge ${
+                                          member.status === "active"
+                                            ? "bg-success"
+                                            : member.status === "inactive"
+                                            ? "bg-danger"
+                                            : member.status === "retired"
+                                            ? "bg-secondary"
+                                            : "bg-warning"
+                                        } ms-1`}
+                                      >
+                                        {member.status === "active"
+                                          ? "Active"
+                                          : member.status === "inactive"
+                                          ? "Inactive"
+                                          : member.status === "retired"
+                                          ? "Retired"
+                                          : "On Leave"}
+                                      </span>
+                                    </div>
+                                    <div className="small">
+                                      <strong>Joined Date:</strong> {formatDateTime(member.created_at)}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="mt-3 d-flex justify-content-end">
+                                  <Button
+                                    variant="outline-primary"
+                                    size="sm"
+                                    className="me-1"
+                                    onClick={() => handleEdit(member)}
+                                  >
+                                    <FaEdit />
+                                  </Button>
+                                  <Button
+                                    variant="outline-danger"
+                                    size="sm"
+                                    onClick={() => handleDelete(member.id)}
+                                  >
+                                    <FaTrash />
+                                  </Button>
+                                </div>
+                              </Card.Body>
+                            </Card>
+                          </Col>
+                          {/* Mobile Edit Form - Appears below staff member when editing */}
+                          {viewMode === "editStaff" && editingId === member.id && (
+                            <Col className="mt-3">
+                              <Card className="border-warning">
+                                <Card.Header className="bg-warning text-dark">
+                                  <div className="d-flex justify-content-between align-items-center">
+                                    <h6 className="mb-0">
+                                      <FaEdit className="me-2" />Editing: {member.name}
+                                    </h6>
+                                    <Button variant="secondary" size="sm" onClick={closeForm}>
+                                      <FaTimes className="me-1" /> Cancel
+                                    </Button>
+                                  </div>
+                                </Card.Header>
+                                <Card.Body>
+                                  <Form onSubmit={handleSubmit}>
+                                    <Row>
+                                      <Col xs={12} className="text-center mb-3">
+                                        <div className="position-relative d-inline-block">
+                                          <div className="position-relative">
+                                            <Image
+                                              src={formData.image || "/logo.png"}
+                                              alt="Staff"
+                                              rounded
+                                              className="mb-3"
+                                              style={{
+                                                width: "100px",
+                                                height: "100px",
+                                                objectFit: "cover",
+                                              }}
+                                              onError={(e) => {
+                                                e.target.src = "/logo.png";
+                                              }}
+                                            />
+                                            <input
+                                              type="file"
+                                              ref={fileInputRef}
+                                              onChange={handleImageUpload}
+                                              accept="image/*"
+                                              style={{ display: "none" }}
+                                            />
+                                            <Button
+                                              variant="primary"
+                                              size="sm"
+                                              onClick={triggerFileInput}
+                                              disabled={uploading}
+                                              className="position-absolute bottom-0 end-0"
+                                            >
+                                              {uploading ? (
+                                                <Spinner animation="border" size="sm" />
+                                              ) : (
+                                                <FaUpload />
+                                              )}
+                                            </Button>
+                                          </div>
+                                          <Form.Text className="text-muted small">
+                                            Upload photo (Max 5MB)
+                                          </Form.Text>
+                                        </div>
+                                      </Col>
+                                      <Col xs={12}>
+                                        <Form.Group controlId={`mobileEditFormName-${member.id}`} className="mb-3">
+                                          <Form.Label>Full Name *</Form.Label>
+                                          <Form.Control
+                                            type="text"
+                                            name="name"
+                                            value={formData.name}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter full name"
+                                            required
+                                          />
+                                        </Form.Group>
+                                      </Col>
+                                      <Col xs={12}>
+                                        <Form.Group controlId={`mobileEditFormRole-${member.id}`} className="mb-3">
+                                          <Form.Label>Role/Position *</Form.Label>
+                                          <Form.Control
+                                            type="text"
+                                            name="role"
+                                            value={formData.role}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g., Teacher, Principal"
+                                            required
+                                          />
+                                        </Form.Group>
+                                      </Col>
+                                      <Col xs={12}>
+                                        <Form.Group controlId={`mobileEditFormQualification-${member.id}`} className="mb-3">
+                                          <Form.Label>Qualification</Form.Label>
+                                          <Form.Control
+                                            type="text"
+                                            name="qualification"
+                                            value={formData.qualification}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g., M.Sc, B.Ed"
+                                          />
+                                        </Form.Group>
+                                      </Col>
+                                      <Col xs={12}>
+                                        <Form.Group controlId={`mobileEditFormContact-${member.id}`} className="mb-3">
+                                          <Form.Label>Contact Number</Form.Label>
+                                          <Form.Control
+                                            type="tel"
+                                            name="contact"
+                                            value={formData.contact}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g., +1234567890"
+                                          />
+                                        </Form.Group>
+                                      </Col>
+                                      <Col xs={12}>
+                                        <Form.Group controlId={`mobileEditFormEmail-${member.id}`} className="mb-3">
+                                          <Form.Label>Email Address *</Form.Label>
+                                          <Form.Control
+                                            type="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g., staff@example.com"
+                                            required
+                                          />
+                                        </Form.Group>
+                                      </Col>
+                                      <Col xs={12}>
+                                        <Form.Group controlId={`mobileEditFormStatus-${member.id}`} className="mb-3">
+                                          <Form.Label>Status</Form.Label>
+                                          <Form.Select
+                                            name="status"
+                                            value={formData.status}
+                                            onChange={handleInputChange}
+                                          >
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                            <option value="on_leave">On Leave</option>
+                                            <option value="retired">Retired</option>
+                                          </Form.Select>
+                                        </Form.Group>
+                                      </Col>
+                                    </Row>
+
+                                    <div className="d-flex justify-content-end gap-2">
+                                      <Button
+                                        variant="secondary"
+                                        onClick={closeForm}
+                                        disabled={isSubmitting}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        variant="warning"
+                                        type="submit"
+                                        disabled={
+                                          !formData.name ||
+                                          !formData.role ||
+                                          !formData.email ||
+                                          isSubmitting
+                                        }
+                                      >
+                                        {isSubmitting ? (
+                                          <>
+                                            <Spinner
+                                              as="span"
+                                              size="sm"
+                                              animation="border"
+                                              role="status"
+                                              aria-hidden="true"
+                                              className="me-2"
+                                            />
+                                            Updating...
+                                          </>
+                                        ) : (
+                                          "Update Staff"
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </Form>
+                                </Card.Body>
+                              </Card>
+                            </Col>
+                          )}
+                        </React.Fragment>
                       ))}
                     </Row>
                   </div>
@@ -739,382 +1316,6 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
           </div>
         </Collapse>
       </Card>
-
-      {/* Add/Edit Staff Modal */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
-        <Form onSubmit={handleSubmit}>
-          <Modal.Header closeButton>
-            <Modal.Title>
-              {editingId ? "Edit Staff Member" : "Add New Staff Member"}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Row>
-              <Col md={4} className="text-center mb-3">
-                <div className="position-relative d-inline-block">
-                  <div className="position-relative">
-                    <Image
-                      src={formData.image || "/logo.png"}
-                      alt="Staff"
-                      rounded
-                      className="mb-3"
-                      style={{
-                        width: "150px",
-                        height: "150px",
-                        objectFit: "cover",
-                      }}
-                      onError={(e) => {
-                        e.target.src = "/logo.png";
-                      }}
-                    />
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageUpload}
-                      accept="image/*"
-                      style={{ display: "none" }}
-                    />
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={triggerFileInput}
-                      disabled={uploading}
-                      className="position-absolute bottom-0 end-0"
-                    >
-                      {uploading ? (
-                        <Spinner animation="border" size="sm" />
-                      ) : (
-                        <FaUpload />
-                      )}
-                    </Button>
-                  </div>
-                  <Form.Text className="text-muted">
-                    Upload a clear photo of the staff member (Max 5MB)
-                  </Form.Text>
-                </div>
-              </Col>
-              <Col md={8}>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group controlId="formName" className="mb-3">
-                      <Form.Label>Full Name *</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        placeholder="Enter full name"
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group controlId="formRole" className="mb-3">
-                      <Form.Label>Role/Position *</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="role"
-                        value={formData.role}
-                        onChange={handleInputChange}
-                        placeholder="e.g., Teacher, Principal"
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group controlId="formQualification" className="mb-3">
-                      <Form.Label>Qualification</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="qualification"
-                        value={formData.qualification}
-                        onChange={handleInputChange}
-                        placeholder="e.g., M.Sc, B.Ed"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group controlId="formContact" className="mb-3">
-                      <Form.Label>Contact Number</Form.Label>
-                      <Form.Control
-                        type="tel"
-                        name="contact"
-                        value={formData.contact}
-                        onChange={handleInputChange}
-                        placeholder="e.g., +1234567890"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={12}>
-                    <Form.Group controlId="formEmail" className="mb-3">
-                      <Form.Label>Email Address *</Form.Label>
-                      <Form.Control
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="e.g., staff@example.com"
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={12}>
-                    <Form.Group controlId="formStatus" className="mb-3">
-                      <Form.Label>Status</Form.Label>
-                      <Form.Select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleInputChange}
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="on_leave">On Leave</option>
-                        <option value="retired">Retired</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="secondary"
-              onClick={() => setShowModal(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={
-                !formData.name ||
-                !formData.role ||
-                !formData.email ||
-                isSubmitting
-              }
-            >
-              {isSubmitting ? (
-                <>
-                  <Spinner
-                    as="span"
-                    size="sm"
-                    animation="border"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
-                  {editingId ? "Updating..." : "Adding..."}
-                </>
-              ) : editingId ? (
-                "Update"
-              ) : (
-                "Add Staff"
-              )}
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
-
-      {/* Staff Form (Full Page View) */}
-      {(viewMode === "addStaff" || viewMode === "editStaff") && (
-        <Card className="mb-4">
-          <Card.Header>
-            <div className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">
-                {editingId ? "Edit Staff Member" : "Add New Staff Member"}
-              </h5>
-              <Button variant="outline-secondary" size="sm" onClick={closeForm}>
-                <FaArrowLeft className="me-1" /> Back to List
-              </Button>
-            </div>
-          </Card.Header>
-          <Card.Body>
-            <Form onSubmit={handleSubmit}>
-              <Row>
-                <Col md={4} className="text-center mb-3">
-                  <div className="position-relative d-inline-block">
-                    <div className="position-relative">
-                      <Image
-                        src={formData.image || "/logo.png"}
-                        alt="Staff"
-                        rounded
-                        className="mb-3"
-                        style={{
-                          width: "150px",
-                          height: "150px",
-                          objectFit: "cover",
-                        }}
-                        onError={(e) => {
-                          e.target.src = "/logo.png";
-                        }}
-                      />
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleImageUpload}
-                        accept="image/*"
-                        style={{ display: "none" }}
-                      />
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={triggerFileInput}
-                        disabled={uploading}
-                        className="position-absolute bottom-0 end-0"
-                      >
-                        {uploading ? (
-                          <Spinner animation="border" size="sm" />
-                        ) : (
-                          <FaUpload />
-                        )}
-                      </Button>
-                    </div>
-                    <Form.Text className="text-muted">
-                      Upload a clear photo of the staff member (Max 5MB)
-                    </Form.Text>
-                  </div>
-                </Col>
-                <Col md={8}>
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group controlId="formName" className="mb-3">
-                        <Form.Label>Full Name *</Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          placeholder="Enter full name"
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group controlId="formRole" className="mb-3">
-                        <Form.Label>Role/Position *</Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="role"
-                          value={formData.role}
-                          onChange={handleInputChange}
-                          placeholder="e.g., Teacher, Principal"
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group
-                        controlId="formQualification"
-                        className="mb-3"
-                      >
-                        <Form.Label>Qualification</Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="qualification"
-                          value={formData.qualification}
-                          onChange={handleInputChange}
-                          placeholder="e.g., M.Sc, B.Ed"
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group controlId="formContact" className="mb-3">
-                        <Form.Label>Contact Number</Form.Label>
-                        <Form.Control
-                          type="tel"
-                          name="contact"
-                          value={formData.contact}
-                          onChange={handleInputChange}
-                          placeholder="e.g., +1234567890"
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                  <Row>
-                    <Col md={12}>
-                      <Form.Group controlId="formEmail" className="mb-3">
-                        <Form.Label>Email Address *</Form.Label>
-                        <Form.Control
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          placeholder="e.g., staff@example.com"
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                  <Row>
-                    <Col md={12}>
-                      <Form.Group controlId="formStatus" className="mb-3">
-                        <Form.Label>Status</Form.Label>
-                        <Form.Select
-                          name="status"
-                          value={formData.status}
-                          onChange={handleInputChange}
-                        >
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                          <option value="on_leave">On Leave</option>
-                          <option value="retired">Retired</option>
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                </Col>
-              </Row>
-
-              <div className="d-flex justify-content-end gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={closeForm}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  type="submit"
-                  disabled={
-                    !formData.name ||
-                    !formData.role ||
-                    !formData.email ||
-                    isSubmitting
-                  }
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Spinner
-                        as="span"
-                        size="sm"
-                        animation="border"
-                        role="status"
-                        aria-hidden="true"
-                        className="me-2"
-                      />
-                      {editingId ? "Updating..." : "Adding..."}
-                    </>
-                  ) : editingId ? (
-                    "Update"
-                  ) : (
-                    "Add Staff"
-                  )}
-                </Button>
-              </div>
-            </Form>
-          </Card.Body>
-        </Card>
       )}
 
       {viewMode === "viewHistory" && editingId && (
@@ -1132,15 +1333,11 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
             </div>
           </Card.Header>
           <Card.Body>
-            <UpdateHistory tableName="staff" recordId={editingId} />
           </Card.Body>
         </Card>
       )}
 
-      {viewMode === "list" && (
-        <UpdateHistory tableName="staff" recordId={null} />
-      )}
-    </div>
+      </div>
   );
 };
 

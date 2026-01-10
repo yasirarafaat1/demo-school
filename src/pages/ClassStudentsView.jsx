@@ -188,11 +188,6 @@ const ClassStudentsView = () => {
                         />
                       </div>
                     </div>
-                    <div>
-                      <Badge>
-                        {filteredStudents.length} students
-                      </Badge>
-                    </div>
                   </div>
 
                   {filteredStudents.length > 0 ? (

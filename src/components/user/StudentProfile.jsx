@@ -25,7 +25,6 @@ import {
   deleteStudent,
   getStudentClasses, // Import to check for roll number conflicts
 } from "../../services/classStudentService";
-import UpdateHistory from "./UpdateHistory";
 
 const StudentProfile = ({ student, onBack, onUpdate }) => {
   const navigate = useNavigate();
@@ -544,16 +543,22 @@ const StudentProfile = ({ student, onBack, onUpdate }) => {
               <p className="text-muted">
                 Student ID: {student.id.toString().padStart(4, "0")}
               </p>
-              <Button variant="primary" onClick={openEditModal}>
-                <FaEdit className="me-2" /> Edit Info
-              </Button>
-              <Button
-                variant="outline-danger"
-                size="sm"
-                onClick={() => confirmDeleteStudent(student)}
-              >
-                <FaTrash />
-              </Button>
+              <div>
+                <Button 
+                variant="primary"
+                size="sm" 
+                className="me-3"
+                onClick={openEditModal}>
+                  <FaEdit className="me-2" /> Edit Info
+                </Button>
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={() => confirmDeleteStudent(student)}
+                >
+                  <FaTrash />
+                </Button>
+              </div>
             </Card.Body>
           </Card>
 
@@ -1058,8 +1063,7 @@ const StudentProfile = ({ student, onBack, onUpdate }) => {
         </Modal.Footer>
       </Modal>
 
-      <UpdateHistory tableName="students" recordId={student.id} />
-    </Container>
+      </Container>
   );
 };
 

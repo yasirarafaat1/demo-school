@@ -37,6 +37,8 @@ import ClassSessionManager from "./components/admin/ClassSessionManager";
 import ClassStudentsView from "./pages/ClassStudentsView";
 import ClassStudentList from "./pages/ClassStudentList";
 import StudentFeesPage from "./pages/StudentFeesPage";
+import AddStudent from "./pages/admin/AddStudent";
+import AllStudents from "./pages/admin/AllStudents";
 import { trackVisitor } from "./services/supabaseService";
 import { requestNotificationPermission } from "./services/notificationService";
 
@@ -141,6 +143,22 @@ const AppLayout = () => {
             element={
               <ProtectedRoute>
                 <StudentFeesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/student/add"
+            element={
+              <ProtectedRoute>
+                <AddStudent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/students/all"
+            element={
+              <ProtectedRoute>
+                <AllStudents />
               </ProtectedRoute>
             }
           />

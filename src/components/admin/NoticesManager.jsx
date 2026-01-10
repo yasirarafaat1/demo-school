@@ -174,7 +174,7 @@ const NoticesManager = () => {
                 </div>
               ) : (
                 <div className="table-responsive">
-                  <Table striped bordered hover responsive className="mb-0">
+                  <Table bordered responsive className="mb-0">
                     <thead>
                       <tr>
                         <th>Title</th>

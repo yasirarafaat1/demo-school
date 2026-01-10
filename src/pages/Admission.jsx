@@ -246,7 +246,7 @@ const Admission = () => {
                 <Card className="shadow-sm">
                   <Card.Body className="p-0">
                     <div className="table-responsive">
-                      <Table responsive striped bordered hover className="mb-0">
+                      <Table bordered responsive className="mb-0">
                         <thead>
                           <tr>
                             <th>Class</th>

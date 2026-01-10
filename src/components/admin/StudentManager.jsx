@@ -36,9 +36,11 @@ import {
   FaUpload,
 } from "react-icons/fa";
 import StudentProfile from "../user/StudentProfile";
-import UpdateHistory from "../user/UpdateHistory";
+import { useNavigate } from "react-router-dom";
 
 const StudentManager = ({ refreshTimestamp, fetchData }) => {
+  const navigate = useNavigate();
+
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -47,6 +49,14 @@ const StudentManager = ({ refreshTimestamp, fetchData }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(50);
+  const [sortField, setSortField] = useState("student_name");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [filterClass, setFilterClass] = useState("");
+  const [filterSession, setFilterSession] = useState("");
+  const [latestSessionId, setLatestSessionId] = useState(null);
+  const [showLatestOnly, setShowLatestOnly] = useState(true);
 
   // Form states
   const [showStudentModal, setShowStudentModal] = useState(false);
@@ -84,6 +94,17 @@ const StudentManager = ({ refreshTimestamp, fetchData }) => {
   useEffect(() => {
     loadData();
   }, [refreshTimestamp]);
+  
+  // Set latest session after data loads
+  useEffect(() => {
+    if (sessions.length > 0) {
+      const latest = sessions[0]; // Sessions are ordered by created_at desc
+      setLatestSessionId(latest.id);
+      if (showLatestOnly) {
+        setFilterSession(latest.id);
+      }
+    }
+  }, [sessions, showLatestOnly]);
 
   const loadData = async () => {
     try {
@@ -108,19 +129,90 @@ const StudentManager = ({ refreshTimestamp, fetchData }) => {
     }
   };
 
-  // Filter students based on search term
-  const filteredStudents = students.filter((student) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      student.student_name.toLowerCase().includes(term) ||
-      student.father_name.toLowerCase().includes(term) ||
-      student.mother_name.toLowerCase().includes(term) ||
-      student.registration_number.toLowerCase().includes(term) ||
-      student.mobile_number.includes(term) ||
-      student.email.toLowerCase().includes(term)
-    );
-  });
+  // Get student assignment by student ID
+  const getStudentAssignment = (studentId) => {
+    return studentClasses.find((sc) => sc.student_id === studentId);
+  };
+
+  // Filter and sort students
+  const processedStudents = students
+    .filter((student) => {
+      // Search filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const searchMatch =
+          student.student_name.toLowerCase().includes(term) ||
+          student.father_name.toLowerCase().includes(term) ||
+          student.mother_name.toLowerCase().includes(term) ||
+          student.registration_number.toLowerCase().includes(term) ||
+          student.mobile_number.includes(term) ||
+          student.email.toLowerCase().includes(term);
+        
+        if (!searchMatch) return false;
+      }
+      
+      // Class filter
+      const assignment = getStudentAssignment(student.id);
+      if (filterClass && (!assignment || String(assignment.class_id) !== String(filterClass))) {
+        return false;
+      }
+      
+      // Session filter
+      if (filterSession && (!assignment || String(assignment.session_id) !== String(filterSession))) {
+        return false;
+      }
+      
+      return true;
+    })
+    .sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortField) {
+        case "student_name":
+          aValue = a.student_name.toLowerCase();
+          bValue = b.student_name.toLowerCase();
+          break;
+        case "registration_number":
+          aValue = a.registration_number || "";
+          bValue = b.registration_number || "";
+          break;
+        case "father_name":
+          aValue = a.father_name.toLowerCase();
+          bValue = b.father_name.toLowerCase();
+          break;
+        case "class":
+          const aAssignment = getStudentAssignment(a.id);
+          const bAssignment = getStudentAssignment(b.id);
+          aValue = aAssignment ? getClassNameById(aAssignment.class_id) : "";
+          bValue = bAssignment ? getClassNameById(bAssignment.class_id) : "";
+          break;
+        case "registration_datetime":
+          aValue = new Date(a.registration_datetime || 0);
+          bValue = new Date(b.registration_datetime || 0);
+          break;
+        default:
+          aValue = a.student_name.toLowerCase();
+          bValue = b.student_name.toLowerCase();
+      }
+      
+      if (sortDirection === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  
+  // Pagination
+  const totalPages = Math.ceil(processedStudents.length / itemsPerPage);
+  const paginatedStudents = processedStudents.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterClass, filterSession, sortField, sortDirection]);
 
   // Handle student form input changes
   const handleStudentFormChange = (e) => {
@@ -408,11 +500,34 @@ const StudentManager = ({ refreshTimestamp, fetchData }) => {
     return sessionObj ? sessionObj.start_year : "N/A";
   };
 
-  // Get student assignment by student ID
-  const getStudentAssignment = (studentId) => {
-    return studentClasses.find((sc) => sc.student_id === studentId);
+  // Handle view all students
+  const handleViewAllStudents = () => {
+    navigate("/admin/students/all");
   };
-
+  
+  // Handle show latest only
+  const handleShowLatestOnly = () => {
+    setShowLatestOnly(true);
+    if (latestSessionId) {
+      setFilterSession(latestSessionId);
+    }
+    setCurrentPage(1);
+  };
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+  
+  // Get sort icon
+  const getSortIcon = (field) => {
+    if (sortField !== field) return "↕️";
+    return sortDirection === "asc" ? "↑" : "↓";
+  };
+  
   // Clear messages after timeout
   useEffect(() => {
     if (error || success) {
@@ -457,24 +572,87 @@ const StudentManager = ({ refreshTimestamp, fetchData }) => {
               <Col>
                 <Card>
                   <Card.Header className="d-flex justify-content-between align-items-center">
-                    <h5 className="mb-0">Students</h5>
-                    <div className="d-flex">
-                      <InputGroup className="me-2" style={{ width: "300px" }}>
-                        <InputGroup.Text>
-                          <FaSearch />
-                        </InputGroup.Text>
-                        <Form.Control
-                          type="text"
-                          placeholder="Search students..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                      </InputGroup>
-                      <Button variant="primary" onClick={openAddStudentForm}>
+                    <div>
+                      <h5 className="mb-0">
+                        Students {showLatestOnly && "(Latest Session)"}
+                      </h5>
+                      <small className="text-muted">
+                        {showLatestOnly && latestSessionId && 
+                          `Showing students from ${sessions.find(s => s.id === latestSessionId)?.start_year || "latest"} session`
+                        }
+                      </small>
+                    </div>
+                    <div className="d-flex gap-2">
+                      {showLatestOnly ? (
+                        <Button 
+                          variant="outline-primary" 
+                          onClick={handleViewAllStudents}
+                        >
+                          View All Students
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline-secondary" 
+                          onClick={handleShowLatestOnly}
+                        >
+                          Show Latest Only
+                        </Button>
+                      )}
+                      <Button variant="primary" onClick={() => navigate("/admin/student/add")}>
                         <FaPlus className="me-1" /> Add Student
                       </Button>
                     </div>
                   </Card.Header>
+                  <Card.Body className="pb-2">
+                    <Row className="mb-3">
+                      <Col md={3}>
+                        <InputGroup>
+                          <InputGroup.Text>
+                            <FaSearch />
+                          </InputGroup.Text>
+                          <Form.Control
+                            type="text"
+                            placeholder="Search students..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                        </InputGroup>
+                      </Col>
+                      <Col md={2}>
+                        <Form.Select
+                          value={filterClass}
+                          onChange={(e) => setFilterClass(e.target.value)}
+                        >
+                          <option value="">All Classes</option>
+                          {classes.map((classObj) => (
+                            <option key={classObj.id} value={classObj.id}>
+                              {classObj.class_number} ({classObj.class_code})
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </Col>
+                      <Col md={4}>
+                        <Form.Select
+                          value={filterSession}
+                          onChange={(e) => setFilterSession(e.target.value)}
+                        >
+                          {sessions.map((session) => (
+                            <option key={session.id} value={session.id}>
+                              {session.id === latestSessionId 
+                                ? `Latest Session (${session.start_year} - ${session.end_year})`
+                                : `${session.start_year} - ${session.end_year})`
+                              }
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </Col>
+                      <Col md={2}>
+                        <div className="text-muted small">
+                          Showing {paginatedStudents.length} of {processedStudents.length} students
+                        </div>
+                      </Col>
+                    </Row>
+                  </Card.Body>
                   <Card.Body>
                     {loading && students.length === 0 ? (
                       <div className="text-center py-4">
@@ -482,74 +660,193 @@ const StudentManager = ({ refreshTimestamp, fetchData }) => {
                           <span className="visually-hidden">Loading...</span>
                         </Spinner>
                       </div>
-                    ) : filteredStudents.length === 0 ? (
+                    ) : paginatedStudents.length === 0 ? (
                       <p className="text-muted text-center">
                         {searchTerm
                           ? "No students match your search."
                           : "No students found. Add your first student."}
                       </p>
                     ) : (
-                      <div className="table-responsive">
-                        <Table striped bordered hover>
-                          <thead>
-                            <tr>
-                              <th>Student ID</th>
-                              <th>Registration No.</th>
-                              <th>Student Name</th>
-                              <th>Father's Name</th>
-                              <th>Current Class</th>
-                              <th>Registration Date</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {filteredStudents.map((student) => {
-                              const assignment = getStudentAssignment(
-                                student.id
-                              );
-                              return (
-                                <tr
-                                  key={student.id}
-                                  onClick={() => {
-                                    setSelectedStudent(student);
-                                    setShowProfile(true);
-                                  }}
+                      <>
+                        <div className="table-responsive">
+                          <Table bordered hover>
+                            <thead>
+                              <tr>
+                                <th 
                                   style={{ cursor: "pointer" }}
+                                  onClick={() => handleSort("student_name")}
                                 >
-                                  <td>{student.id}</td>
-                                  <td>
-                                    {student.registration_number || "N/A"}
-                                  </td>
-                                  <td>
-                                    <div className="d-flex align-items-center">
-                                      <span>{student.student_name}</span>
-                                    </div>
-                                  </td>
-                                  <td>{student.father_name}</td>
-                                  <td>
-                                    {assignment
-                                      ? getClassNameById(assignment.class_id)
-                                      : "N/A"}
-                                  </td>
-                                  <td>
-                                    {formatDateTime(
-                                      student.registration_datetime
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </Table>
-                      </div>
+                                  Student Name {getSortIcon("student_name")}
+                                </th>
+                                <th 
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => handleSort("registration_number")}
+                                >
+                                  Registration No. {getSortIcon("registration_number")}
+                                </th>
+                                <th 
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => handleSort("father_name")}
+                                >
+                                  Father's Name {getSortIcon("father_name")}
+                                </th>
+                                <th 
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => handleSort("class")}
+                                >
+                                  Current Class {getSortIcon("class")}
+                                </th>
+                                <th 
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => handleSort("registration_datetime")}
+                                >
+                                  Registration Date {getSortIcon("registration_datetime")}
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {paginatedStudents.map((student) => {
+                                const assignment = getStudentAssignment(
+                                  student.id
+                                );
+                                return (
+                                  <tr key={student.id}>
+                                    <td
+                                      onClick={() => {
+                                        setSelectedStudent(student);
+                                        setShowProfile(true);
+                                      }}
+                                      style={{ cursor: "pointer" }}
+                                    >
+                                      <div className="d-flex align-items-center">
+                                        <span>{student.student_name}</span>
+                                      </div>
+                                    </td>
+                                    <td
+                                      onClick={() => {
+                                        setSelectedStudent(student);
+                                        setShowProfile(true);
+                                      }}
+                                      style={{ cursor: "pointer" }}
+                                    >
+                                      {student.registration_number || "N/A"}
+                                    </td>
+                                    <td
+                                      onClick={() => {
+                                        setSelectedStudent(student);
+                                        setShowProfile(true);
+                                      }}
+                                      style={{ cursor: "pointer" }}
+                                    >
+                                      {student.father_name}
+                                    </td>
+                                    <td
+                                      onClick={() => {
+                                        setSelectedStudent(student);
+                                        setShowProfile(true);
+                                      }}
+                                      style={{ cursor: "pointer" }}
+                                    >
+                                      {assignment
+                                        ? getClassNameById(assignment.class_id)
+                                        : "N/A"}
+                                    </td>
+                                    <td
+                                      onClick={() => {
+                                        setSelectedStudent(student);
+                                        setShowProfile(true);
+                                      }}
+                                      style={{ cursor: "pointer" }}
+                                    >
+                                      {formatDateTime(
+                                        student.registration_datetime
+                                      )}
+                                    </td>
+                                    
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </Table>
+                        </div>
+                        
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                          <div className="d-flex justify-content-between align-items-center mt-3">
+                            <div className="text-muted">
+                              Page {currentPage} of {totalPages}
+                            </div>
+                            <div className="btn-group" role="group">
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                onClick={() => setCurrentPage(1)}
+                                disabled={currentPage === 1}
+                              >
+                                First
+                              </Button>
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                onClick={() => setCurrentPage(currentPage - 1)}
+                                disabled={currentPage === 1}
+                              >
+                                Previous
+                              </Button>
+                              
+                              {/* Page numbers */}
+                              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                  pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                  pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                  pageNum = totalPages - 4 + i;
+                                } else {
+                                  pageNum = currentPage - 2 + i;
+                                }
+                                
+                                return (
+                                  <Button
+                                    key={pageNum}
+                                    variant={currentPage === pageNum ? "primary" : "outline-secondary"}
+                                    size="sm"
+                                    onClick={() => setCurrentPage(pageNum)}
+                                  >
+                                    {pageNum}
+                                  </Button>
+                                );
+                              })}
+                              
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                onClick={() => setCurrentPage(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                              >
+                                Next
+                              </Button>
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                onClick={() => setCurrentPage(totalPages)}
+                                disabled={currentPage === totalPages}
+                              >
+                                Last
+                              </Button>
+                            </div>
+                            <div className="text-muted">
+                              {processedStudents.length} total students
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </Card.Body>
                 </Card>
               </Col>
             </Row>
-          )}
-
-          {viewMode === "list" && editingStudent && (
-            <UpdateHistory tableName="students" recordId={editingStudent.id} />
           )}
 
           {/* Student Modal */}

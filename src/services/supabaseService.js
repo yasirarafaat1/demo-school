@@ -902,37 +902,6 @@ export const uploadFile = async (file, bucket = 'gallery', path = '') => {
     }
 };
 
-/**
- * Fetches update history records.
- * @param {string} tableName - Name of the table to filter by.
- * @param {number} recordId - ID of the record to filter by.
- * @returns {Promise<Array<object>>} Array of update history objects.
- */
-export const getUpdateHistory = async (tableName = null, recordId = null) => {
-    try {
-        let query = supabase
-            .from('update_history')
-            .select('*')
-            .order('updated_at', { ascending: false });
-
-        if (tableName) {
-            query = query.eq('table_name', tableName);
-        }
-
-        if (recordId) {
-            query = query.eq('record_id', recordId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-        return data || [];
-    } catch (error) {
-        console.error("Error fetching update history:", error.message);
-        throw error;
-    }
-};
-
 // --- Visitor Analytics Functions ---
 
 /**
