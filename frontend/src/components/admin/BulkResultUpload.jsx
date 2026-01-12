@@ -153,9 +153,7 @@ const BulkResultUpload = ({ onUploadSuccess }) => {
           if (studentInfo.class && studentInfo.class !== group.class_code) {
             className = studentInfo.class;
           }
-          console.log('Preview student data fetched:', { studentName, className, rollNo: group.roll_no, classCode: group.class_code });
         } catch (studentError) {
-          console.log('Could not fetch student data:', studentError.message);
           // Keep default values if fetch fails
         }
 

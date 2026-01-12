@@ -58,8 +58,6 @@ const AddResult = () => {
   // Function to check for existing exam types for a specific student
   const checkExistingExamTypes = async (rollNo, classCode) => {
     try {
-      console.log('Checking existing exam types using cached data:', { rollNo, classCode });
-      
       // Use cached data only to avoid 406 errors
       const cachedExamTypes = existingResults
         .filter(
@@ -67,8 +65,6 @@ const AddResult = () => {
             r.roll_no === rollNo && r.class_code === classCode
         )
         .map((r) => r.exam_type);
-      
-      console.log('Found cached exam types:', cachedExamTypes);
       return cachedExamTypes;
     } catch (err) {
       console.error('Error in checkExistingExamTypes:', err);
@@ -79,8 +75,6 @@ const AddResult = () => {
   // Function to check if specific exam type exists
   const checkExamTypeExists = async (rollNo, classCode, examType) => {
     try {
-      console.log('Checking exam type existence using cached data:', { rollNo, classCode, examType });
-      
       // Use cached data only to avoid 406 errors
       const cachedResult = existingResults.find(
         (r) =>
@@ -89,7 +83,6 @@ const AddResult = () => {
           r.exam_type === examType
       );
       
-      console.log('Found cached result:', cachedResult);
       return !!cachedResult;
     } catch (err) {
       console.error('Error in checkExamTypeExists:', err);
@@ -146,7 +139,6 @@ const AddResult = () => {
         setStudentNotFound(false);
       } else {
         // Only call the external service if we don't have the data cached
-        console.log('Student not found in cached results, calling external service...');
         const studentInfo = await getStudentByRollNumberAndClassCode(
           rollNo,
           classCode

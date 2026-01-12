@@ -1,114 +1,72 @@
-# School Website Frontend
+# School Demo - Full Stack Application
 
-This is a React-based frontend application for a school website, built with modern web technologies.
+Complete school management system with separate frontend and backend.
 
-## WEB URL
-sspublicschool.vercel.app
-
-## Features
-
-- Responsive design
-- Modern UI components
-- Smooth animations
-- SEO-friendly
-- Accessible
-- Gallery Management System
-
-## Prerequisites
-
-- Node.js v14 or higher
-- npm package manager
-- Supabase account and project
-
-## Setup
-
-1. Clone the repository:
-   ```
-   git clone <repository-url>
-   cd School-demo
-   ```
-
-2. Install dependencies:
-   ```
-   npm install
-   ```
-
-3. Configure environment variables:
-   - Copy `.env.example` to `.env`
-   - Update the Supabase credentials in the `.env` file
-
-
-
-## Running the Application
-
-### Development Server
+## Structure
 
 ```
+School-demo/
+├── frontend/          # React frontend (deployable separately)
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   ├── .env.example
+│   └── README.md
+└── backend/           # Node.js backend (deployable separately)
+    ├── server.js
+    ├── api/
+    ├── package.json
+    ├── .env.example
+    └── README.md
+```
+
+## Quick Start
+
+### Frontend Only
+```bash
+cd frontend
+cp .env.example .env
+# Edit .env with your values
+npm install
 npm run dev
 ```
 
-This starts the Vite development server.
-
-### Production Build
-
-```
-npm run build
-```
-
-This creates a production build in the `dist` directory.
-
-### Preview Production Build
-
-```
-npm run preview
+### Backend Only
+```bash
+cd backend
+cp .env.example .env
+# Edit .env with your values
+npm install
+npm run dev
 ```
 
-This serves the production build locally for testing.
+## Deployment
 
-## Project Structure
+### Frontend Deployment
+- Deploy `frontend/` folder to Vercel, Netlify, or any static hosting
+- Set environment variables in hosting platform
 
-- `/src` - Source code
-  - `/components` - Reusable React components
-  - `/pages` - Page components
-  - `/styles` - CSS styles
-  - `/utils` - Utility functions
-  - `/__tests__` - Test files
-- `/public` - Static assets
-  - Images
-  - Fonts
-  - Other static files
+### Backend Deployment
+- Deploy `backend/` folder to Vercel, Heroku, or any Node.js hosting
+- Set environment variables in hosting platform
 
-## Technologies Used
+## Environment Variables
 
-- React
-- React Router
-- Vite
-- Bootstrap
-- AOS (Animate On Scroll)
-- React Helmet
-- Supabase (for backend services)
+Both frontend and backend have their own `.env.example` files with detailed explanations.
 
-## Gallery Management System
+## Features
 
-This project includes a comprehensive gallery management system that allows administrators to:
-- Upload images directly from the admin panel
-- Organize images into categories
-- Delete images and categories
-- View all images in a responsive gallery
+- Student Management
+- Fee Management
+- Result Management
+- Gallery System
+- Email Notifications
+- Admin Dashboard
+- Responsive Design
 
-The gallery management system allows administrators to upload, organize, and manage images directly from the admin panel.
+## Technologies
 
-## Class and Student Management System
-
-The admin panel also includes a comprehensive class and student management system that allows administrators to:
-- Manage classes with Roman numeral class numbers (Ist, IInd, IIIrd, etc.) and alphanumeric class codes (A101, B305, etc.)
-- Manage academic sessions (e.g., "2025 to 2026")
-- Add, edit, and delete student information including personal details
-- Assign students to classes for specific sessions with roll numbers
-- Search and filter students
-
-All data is stored in Supabase tables with proper relationships and constraints.
-
-## License
-
-ISC
+- **Frontend**: React, Vite, Bootstrap, React Router
+- **Backend**: Node.js, Express, Supabase, Resend
+- **Database**: Supabase (PostgreSQL)
+- **Email**: Resend

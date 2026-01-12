@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   Button,
   Card,
@@ -55,7 +55,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
     contact: "",
     email: "",
     status: "active",
-    image: "/logo.png",
+    image: "logo.png",
   });
 
   // Full page view states
@@ -77,7 +77,6 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
       const staffData = await getStaffMembers();
       setStaff(staffData);
     } catch (err) {
-      console.error("Error fetching staff:", err);
       // Handle specific error cases
       if (
         err.message &&
@@ -96,6 +95,10 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
   useEffect(() => {
     fetchStaff();
   }, [refreshTimestamp]);
+
+  // Debug state changes
+  useEffect(() => {
+  }, [viewMode, editingId]);
 
   // Filter and search staff
   const filteredStaff = useMemo(() => {
@@ -178,7 +181,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
           await supabase.storage.listBuckets();
 
         if (bucketError) {
-          console.warn("Could not list buckets:", bucketError);
+          // Could not list buckets
         } else if (buckets && buckets.length > 0) {
           // Use 'images' bucket if it exists, otherwise use the first available bucket
           const imagesBucket = buckets.find(
@@ -188,9 +191,9 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
         } else {
           // If no buckets exist, we'll try to upload without specifying a bucket
           // and handle the error gracefully
-          console.warn("No storage buckets found");
         }
       } catch (bucketError) {
+        // Error listing buckets, will try direct upload
         console.warn(
           "Error listing buckets, will try direct upload:",
           bucketError
@@ -206,7 +209,6 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
         data = result.data;
         error = result.error;
       } catch (uploadError) {
-        console.warn("Bucket upload failed:", uploadError);
         // If bucket upload fails, fall back to base64 encoding
         const base64Image = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -229,7 +231,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
 
       if (error) {
         // If we get a bucket error, fall back to base64
-        if (error.message && error.message.includes("Bucket")) {
+        if (error) {
           const base64Image = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
@@ -247,8 +249,9 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
           setSuccess("Image processed successfully (stored locally)");
           setTimeout(() => setSuccess(""), 3000);
           return; // Exit early as we're using base64
+        } else {
+          throw error;
         }
-        throw error;
       }
 
       // Get public URL
@@ -265,7 +268,6 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
       setSuccess("Image uploaded successfully");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      console.error("Error uploading image:", err);
       setError("Failed to upload image. Please try again.");
     } finally {
       setUploading(false);
@@ -302,7 +304,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
     }
 
     // Check if image is the default placeholder (meaning no image was uploaded)
-    if (!formData.image || formData.image === "/logo.png") {
+    if (!formData.image || formData.image === "logo.png") {
       setError("Please upload a staff member image");
       setIsSubmitting(false);
       return;
@@ -318,7 +320,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
         email: formData.email,
         status: formData.status,
         // Use uploaded image or default
-        image_url: formData.image || "/logo.png",
+        image_url: formData.image || "logo.png",
       };
 
       // If updating, call update function, else create new
@@ -338,9 +340,14 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
       if (fetchData) {
         fetchData();
       }
+      
+      // Reset form and return to list view after successful operation
+      handleReset();
+      setViewMode("list");
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      console.error("Error saving staff member:", err);
-
       // Handle specific error cases
       if (err.message && err.message.includes("row-level security")) {
         setError(
@@ -361,18 +368,24 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
   };
 
   // Handle edit button click
-  const handleEdit = (staffMember) => {
-    setFormData({
+  const handleEdit = useCallback((staffMember) => {
+    
+    // Use functional updates to ensure proper state setting
+    setFormData(prev => ({
+      ...prev,
       name: staffMember.name || "",
       role: staffMember.role || "",
       qualification: staffMember.qualification || "",
       contact: staffMember.contact || "",
       email: staffMember.email || "",
       status: staffMember.status || "active",
-      image: staffMember.image_url || staffMember.image || "/logo.png",
-    });
+      image: staffMember.image_url || staffMember.image || "logo.png",
+    }));
+    
     setEditingId(staffMember.id);
+    
     setViewMode("editStaff");
+    
     // Scroll to the staff member being edited
     setTimeout(() => {
       const element = document.getElementById(`staff-${staffMember.id}`);
@@ -380,7 +393,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 100);
-  };
+  }, []);
 
   // Handle delete button click
   const handleDelete = async (id) => {
@@ -394,7 +407,6 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
         }
         setTimeout(() => setSuccess(""), 3000);
       } catch (err) {
-        console.error("Error deleting staff member:", err);
         setError("Failed to delete staff member. Please try again.");
       }
     }
@@ -409,7 +421,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
       contact: "",
       email: "",
       status: "active",
-      image: "/logo.png",
+      image: "logo.png",
     });
     setEditingId(null);
   };
@@ -446,6 +458,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
 
   return (
     <div className="staff-manager">
+      
       {/* Header and Add Button - Always visible */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h4>Staff Management</h4>
@@ -484,7 +497,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                       <div className="position-relative d-inline-block">
                         <div className="position-relative">
                           <Image
-                            src={formData.image || "/logo.png"}
+                            src={formData.image || "logo.png"}
                             alt="Staff"
                             rounded
                             className="mb-3"
@@ -494,7 +507,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                               objectFit: "cover",
                             }}
                             onError={(e) => {
-                              e.target.src = "/logo.png";
+                              e.target.src = "logo.png";
                             }}
                           />
                           <input
@@ -770,7 +783,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                                     objectFit: "cover",
                                   }}
                                   onError={(e) => {
-                                    e.target.src = "/logo.png";
+                                    e.target.src = "logo.png";
                                   }}
                                 />
                               </td>
@@ -837,9 +850,11 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                               </td>
                             </tr>
                             {/* Edit Form Row - Appears below staff member when editing */}
-                            {viewMode === "editStaff" && editingId === member.id && (
+                            {(() => {
+                              return viewMode === "editStaff" && editingId === member.id;
+                            })() && (
                               <tr>
-                                <td colSpan="7" className="p-0">
+                                <td colSpan="8" className="p-0">
                                   <Card className="m-2">
                                     <Card.Header className="text-dark">
                                       <div className="d-flex justify-content-between align-items-center">
@@ -858,7 +873,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                                             <div className="position-relative d-inline-block">
                                               <div className="position-relative">
                                                 <Image
-                                                  src={formData.image || "/logo.png"}
+                                                  src={formData.image || "logo.png"}
                                                   alt="Staff"
                                                   rounded
                                                   className="mb-3"
@@ -868,7 +883,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                                                     objectFit: "cover",
                                                   }}
                                                   onError={(e) => {
-                                                    e.target.src = "/logo.png";
+                                                    e.target.src = "logo.png";
                                                   }}
                                                 />
                                                 <input
@@ -1050,7 +1065,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                                       objectFit: "cover",
                                     }}
                                     onError={(e) => {
-                                      e.target.src = "/logo.png";
+                                      e.target.src = "logo.png";
                                     }}
                                   />
                                   <div className="ms-3 flex-grow-1">
@@ -1127,7 +1142,10 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                             </Card>
                           </Col>
                           {/* Mobile Edit Form - Appears below staff member when editing */}
-                          {viewMode === "editStaff" && editingId === member.id && (
+                          {(() => {
+
+                            return viewMode === "editStaff" && editingId === member.id;
+                          })() && (
                             <Col className="mt-3">
                               <Card className="border-warning">
                                 <Card.Header className="bg-warning text-dark">
@@ -1147,7 +1165,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                                         <div className="position-relative d-inline-block">
                                           <div className="position-relative">
                                             <Image
-                                              src={formData.image || "/logo.png"}
+                                              src={formData.image || "logo.png"}
                                               alt="Staff"
                                               rounded
                                               className="mb-3"
@@ -1157,7 +1175,7 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
                                                 objectFit: "cover",
                                               }}
                                               onError={(e) => {
-                                                e.target.src = "/logo.png";
+                                                e.target.src = "logo.png";
                                               }}
                                             />
                                             <input
@@ -1317,6 +1335,200 @@ const StaffManager = ({ refreshTimestamp, fetchData }) => {
         </Collapse>
       </Card>
       )}
+
+      {/* Edit Form Section - Rendered outside the table */}
+      {viewMode === "editStaff" && editingId && (() => {
+        const editingMember = staff.find(member => member.id === editingId);
+        if (!editingMember) return null;
+        
+        return (
+          <Card className="mb-4">
+            <Card.Header className="text-dark">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">
+                  <FaEdit className="me-2" />Editing: {editingMember.name}
+                </h5>
+                <Button variant="secondary" size="sm" onClick={closeForm}>
+                  <FaTimes className="me-1" /> Cancel
+                </Button>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <Form onSubmit={handleSubmit}>
+                <Row>
+                  <Col md={4} className="text-center mb-3">
+                    <div className="position-relative d-inline-block">
+                      <div className="position-relative">
+                        <Image
+                          src={formData.image || "logo.png"}
+                          alt="Staff"
+                          rounded
+                          className="mb-3"
+                          style={{
+                            width: "120px",
+                            height: "120px",
+                            objectFit: "cover",
+                          }}
+                          onError={(e) => {
+                            e.target.src = "logo.png";
+                          }}
+                        />
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleImageUpload}
+                          accept="image/*"
+                          style={{ display: "none" }}
+                        />
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={triggerFileInput}
+                          disabled={uploading}
+                          className="position-absolute bottom-0 end-0"
+                        >
+                          {uploading ? (
+                            <Spinner animation="border" size="sm" />
+                          ) : (
+                            <FaUpload />
+                          )}
+                        </Button>
+                      </div>
+                      <Form.Text className="text-muted small">
+                        Upload photo (Max 5MB)
+                      </Form.Text>
+                    </div>
+                  </Col>
+                  <Col md={8}>
+                    <Row>
+                      <Col md={6}>
+                        <Form.Group controlId="editFormName" className="mb-3">
+                          <Form.Label>Full Name *</Form.Label>
+                          <Form.Control
+                            type="text"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleInputChange}
+                            placeholder="Enter full name"
+                            required
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group controlId="editFormRole" className="mb-3">
+                          <Form.Label>Role/Position *</Form.Label>
+                          <Form.Control
+                            type="text"
+                            name="role"
+                            value={formData.role}
+                            onChange={handleInputChange}
+                            placeholder="e.g., Teacher, Principal"
+                            required
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={6}>
+                        <Form.Group controlId="editFormQualification" className="mb-3">
+                          <Form.Label>Qualification</Form.Label>
+                          <Form.Control
+                            type="text"
+                            name="qualification"
+                            value={formData.qualification}
+                            onChange={handleInputChange}
+                            placeholder="e.g., M.Sc, B.Ed"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group controlId="editFormContact" className="mb-3">
+                          <Form.Label>Contact Number</Form.Label>
+                          <Form.Control
+                            type="tel"
+                            name="contact"
+                            value={formData.contact}
+                            onChange={handleInputChange}
+                            placeholder="e.g., +1234567890"
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={12}>
+                        <Form.Group controlId="editFormEmail" className="mb-3">
+                          <Form.Label>Email Address *</Form.Label>
+                          <Form.Control
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            placeholder="e.g., staff@example.com"
+                            required
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={6}>
+                        <Form.Group controlId="editFormStatus" className="mb-3">
+                          <Form.Label>Status</Form.Label>
+                          <Form.Select
+                            name="status"
+                            value={formData.status}
+                            onChange={handleInputChange}
+                          >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="on_leave">On Leave</option>
+                            <option value="retired">Retired</option>
+                          </Form.Select>
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                  </Col>
+                </Row>
+
+                <div className="d-flex justify-content-end gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={closeForm}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    disabled={
+                      !formData.name ||
+                      !formData.role ||
+                      !formData.email ||
+                      isSubmitting
+                    }
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Spinner
+                          as="span"
+                          size="sm"
+                          animation="border"
+                          role="status"
+                          aria-hidden="true"
+                          className="me-2"
+                        />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Staff"
+                    )}
+                  </Button>
+                </div>
+              </Form>
+            </Card.Body>
+          </Card>
+        );
+      })()}
 
       {viewMode === "viewHistory" && editingId && (
         <Card className="mb-4">
