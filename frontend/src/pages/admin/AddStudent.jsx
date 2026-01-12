@@ -219,6 +219,7 @@ const AddStudent = () => {
                         alt="Preview"
                         style={{ maxWidth: "100px", maxHeight: "100px" }}
                       />
+                      
                     </div>
                   )}
                 </Form.Group>
