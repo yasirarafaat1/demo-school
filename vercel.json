@@ -1,12 +1,22 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "frontend/dist",
-  "framework": "vite",
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/frontend/index.html"
+      "src": "frontend/package.json",
+      "use": "@vercel/static",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/frontend/(.*)",
+      "dest": "/frontend/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/index.html"
     }
   ]
 }
