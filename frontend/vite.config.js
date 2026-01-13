@@ -7,8 +7,9 @@ export default defineConfig({
   server: {
     host: '0.0.0.0'
   },
+  base: '/',
   build: {
-    outDir: 'dist',
+    outDir: '../dist',
     assetsDir: 'assets',
     sourcemap: true
   }
