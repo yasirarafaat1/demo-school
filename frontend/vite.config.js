@@ -7,15 +7,9 @@ export default defineConfig({
   server: {
     host: '0.0.0.0'
   },
-  base: '/frontend',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true,
-    rollupOptions: {
-      input: {
-        main: './index.html'
-      }
-    }
+    sourcemap: true
   }
 })

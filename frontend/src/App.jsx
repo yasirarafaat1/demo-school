@@ -182,7 +182,7 @@ export default function App() {
   }, []);
 
   return (
-    <Router basename={import.meta.env.BASE_URL}>
+    <Router>
       <div className="app-container">
         <AppLayout />
       </div>

@@ -1,0 +1,13 @@
+/* Custom styles for hero section and program icons */
+.hero-section {
+  background: url("path-to-your-hero-image.jpg") no-repeat center
+    center/cover;
+  color: white;
+  text-align: center;
+  padding: 100px 0;
+}
+
+.program-icon {
+  font-size: 3rem;
+  color: #007bff;
+}
